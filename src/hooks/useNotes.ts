@@ -165,10 +165,34 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
     }
   };
 
+  // Chan goi chong cheo (bam nut "+" lien tuc truoc khi request truoc resolve) -
+  // neu khong co guard nay, 2 lan bam gan nhau se cung tinh uniqueName() tren
+  // CUNG 1 state "notes" cu (chua kip cap nhat note vua tao), sinh ra cung 1
+  // ten -> lan 2 luon bi backend tu choi 409 DUPLICATE_FILE_NAME.
+  const creatingNoteRef = useRef(false);
+
   const newNote = async () => {
-    const name = uniqueName(notes, "New Note.txt");
+    if (creatingNoteRef.current) return;
+    creatingNoteRef.current = true;
     try {
-      const created = await repo.create(name, "");
+      let name = uniqueName(notes, "New Note.txt");
+      let created;
+      try {
+        created = await repo.create(name, "");
+      } catch (err) {
+        // Trung ten THAT tren server du client nghi la con trong (VD danh
+        // sach local bi lech - tao tu thiet bi/tab khac, hoac list() ban dau
+        // chua tai xong). Lay lai danh sach that tu server roi thu lai 1 LAN
+        // voi ten moi, thay vi bo cuoc ngay (truoc day chi console.error).
+        if (err instanceof ApiError && err.code === "DUPLICATE_FILE_NAME") {
+          const fresh = await repo.list();
+          const freshNotes = fresh.map((s) => toLocalNote(s));
+          name = uniqueName(freshNotes, "New Note.txt");
+          created = await repo.create(name, "");
+        } else {
+          throw err;
+        }
+      }
       const note = toLocalNote(created, created.content, true);
       setNotes((n) => [...n, note]);
       setTabs((t) => [...t, note.id]);
@@ -176,10 +200,11 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
       markSaved();
       setTimeout(() => textarea.current?.focus(), 0);
     } catch (err) {
-      // Trung ten (hiem - race condition giua nhieu thiet bi/tab cung luc,
-      // chi co the xay ra o Server Mode) hoac loi mang. KHONG tu tao 1 note
-      // "gia" tren client neu bi tu choi - se lam UI lech voi du lieu that.
+      // Loi mang hoac trung ten lan 2 lien tiep (rat hiem). KHONG tu tao 1
+      // note "gia" tren client neu bi tu choi - se lam UI lech voi du lieu that.
       console.error("Tạo note mới thất bại:", err instanceof ApiError ? err.message : err);
+    } finally {
+      creatingNoteRef.current = false;
     }
   };
 
