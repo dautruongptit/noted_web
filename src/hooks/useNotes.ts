@@ -175,24 +175,15 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
     if (creatingNoteRef.current) return;
     creatingNoteRef.current = true;
     try {
-      let name = uniqueName(notes, "New Note.txt");
-      let created;
-      try {
-        created = await repo.create(name, "");
-      } catch (err) {
-        // Trung ten THAT tren server du client nghi la con trong (VD danh
-        // sach local bi lech - tao tu thiet bi/tab khac, hoac list() ban dau
-        // chua tai xong). Lay lai danh sach that tu server roi thu lai 1 LAN
-        // voi ten moi, thay vi bo cuoc ngay (truoc day chi console.error).
-        if (err instanceof ApiError && err.code === "DUPLICATE_FILE_NAME") {
-          const fresh = await repo.list();
-          const freshNotes = fresh.map((s) => toLocalNote(s));
-          name = uniqueName(freshNotes, "New Note.txt");
-          created = await repo.create(name, "");
-        } else {
-          throw err;
-        }
-      }
+      // "New Note.txt" la ten TU SINH, khong phai nguoi dung go - van chu
+      // dong tranh trung ten o day (uniqueName) de KHONG vo tinh ghi de 1 note
+      // "New Note.txt" khac dang co san. repo.create() gio khong con nem loi
+      // DUPLICATE_FILE_NAME nua (backend/local se ghi de neu that su trung,
+      // xem NoteServiceImpl.createNote/localNotesStore.create) - truong hop
+      // hiem gap do danh sach client bi lech van co the xay ra, nhung khong
+      // con can retry rieng, chi la note bi ghi de thay vi tao them ban moi.
+      const name = uniqueName(notes, "New Note.txt");
+      const created = await repo.create(name, "");
       const note = toLocalNote(created, created.content, true);
       setNotes((n) => [...n, note]);
       setTabs((t) => [...t, note.id]);

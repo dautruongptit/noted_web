@@ -3,13 +3,15 @@
 type Props = {
   name: string;
   error: string;
+  warning: string;
+  confirmingOverwrite: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
   onChange: (value: string) => void;
   onCancel: () => void;
   onCommit: () => void;
 };
 
-export function RenameModal({ name, error, inputRef, onChange, onCancel, onCommit }: Props) {
+export function RenameModal({ name, error, warning, confirmingOverwrite, inputRef, onChange, onCancel, onCommit }: Props) {
   return (
     <div className="dialog-backdrop" onClick={onCancel}>
       <section className="dialog" onClick={(e) => e.stopPropagation()}>
@@ -25,10 +27,15 @@ export function RenameModal({ name, error, inputRef, onChange, onCancel, onCommi
             autoFocus
           />
           {error && <p className="field-error">{error}</p>}
+          {/* Canh bao trung ten - KHONG chan Luu (khac error), chi bao truoc
+              se ghi de. Bam Luu lan 2 (confirmingOverwrite) moi thuc su ghi de. */}
+          {!error && warning && <p className="field-warning">{warning}</p>}
         </div>
         <div>
           <button onClick={onCancel}>Huỷ</button>
-          <button className="action-confirm" onClick={onCommit} disabled={!!error || !name.trim()}>Lưu tên</button>
+          <button className="action-confirm" onClick={onCommit} disabled={!!error || !name.trim()}>
+            {confirmingOverwrite ? "Ghi đè" : "Lưu tên"}
+          </button>
         </div>
       </section>
     </div>

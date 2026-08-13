@@ -142,7 +142,12 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
     () => notesApi.setMenuId(null),
     notesApi.newNote,
   );
-  const renameApi = useRename(notesApi.notes, notesApi.setNotes, () => notesApi.setMenuId(null));
+  const renameApi = useRename(
+    mode, notesApi.notes, notesApi.setNotes,
+    notesApi.tabs, notesApi.setTabs,
+    notesApi.activeId, notesApi.setActiveId,
+    () => notesApi.setMenuId(null),
+  );
 
   const handleChangeContent = (value: string) => {
     notesApi.setNotes((items) =>
@@ -252,6 +257,8 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
         <RenameModal
           name={renameApi.renameName}
           error={renameApi.renameError}
+          warning={renameApi.renameWarning}
+          confirmingOverwrite={renameApi.confirmOverwrite}
           inputRef={renameApi.renameInput}
           onChange={renameApi.onRenameChange}
           onCancel={() => renameApi.setRenameId(null)}

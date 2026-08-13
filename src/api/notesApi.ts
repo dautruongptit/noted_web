@@ -15,11 +15,11 @@ export const notesApi = {
   get: (id: number): Promise<NoteDetail> => api.get<NoteDetail>(`/api/notes/${id}`),
 
   /**
-   * POST /api/notes - tao note moi. Backend se TU DONG tra loi 409 Conflict
-   * (ApiError voi code "DUPLICATE_FILE_NAME") neu displayName da ton tai -
-   * ben goi (UI) can bat try/catch va hien thi loi ro rang cho nguoi dung,
-   * KHONG tu y doi ten roi thu lai (de nguoi dung chu dong quyet dinh ten
-   * moi, tranh gay bat ngo).
+   * POST /api/notes - tao note moi. Neu displayName TRUNG voi 1 note dang co
+   * san, backend se GHI DE noi dung note do (giu nguyen id) thay vi tao them
+   * ban moi hay tra loi 409 - xem NoteServiceImpl.createNote(). Ben goi (UI)
+   * nen tu tranh trung ten TRUOC khi goi (VD uniqueName() cho ten tu sinh)
+   * neu khong muon ghi de ngoai y muon.
    */
   create: (displayName: string, initialContent = ""): Promise<NoteDetail> =>
     api.post<NoteDetail>("/api/notes", { displayName, initialContent }),
@@ -32,7 +32,13 @@ export const notesApi = {
   updateContent: (id: number, content: string, localUpdatedAtEpochMs: number = Date.now()): Promise<NoteDetail> =>
     api.patch<NoteDetail>(`/api/notes/${id}/content`, { content, localUpdatedAtEpochMs }),
 
-  /** PATCH /api/notes/{id}/rename - doi ten hien thi, KHONG dong den file vat ly */
+  /**
+   * PATCH /api/notes/{id}/rename - doi ten hien thi, KHONG dong den file vat
+   * ly. Neu newDisplayName trung ten 1 note KHAC dang co san, backend se GHI
+   * DE note do bang noi dung cua note dang doi ten, roi xoa mem note nay -
+   * response tra ve khi do la cua note BI GHI DE (id KHAC id truyen vao) -
+   * xem NoteServiceImpl.rename() va useRename.ts (phan xu ly id thay doi).
+   */
   rename: (id: number, newDisplayName: string): Promise<NoteSummary> =>
     api.patch<NoteSummary>(`/api/notes/${id}/rename`, { newDisplayName }),
 

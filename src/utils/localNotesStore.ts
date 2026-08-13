@@ -105,10 +105,23 @@ export const localNotesStore = {
 
   async create(displayName: string, initialContent: string): Promise<NoteDetail> {
     const all = await getAllRaw();
-    const finalName = uniqueLocalName(all, displayName);
+    const name = displayName.trim();
+
+    // Khop hanh vi voi backend (NoteServiceImpl.createNote): trung ten voi 1
+    // note dang co -> GHI DE noi dung note do (giu nguyen id), KHONG tu doi
+    // ten. uniqueLocalName() van con dung o cac cho TU SINH ten (newNote()/
+    // duplicate()), noi trung ten la do he thong tu dat chu khong phai nguoi
+    // dung go, nen tranh ghi de ngoai y muon o do.
+    const existing = all.find((n) => n.displayName.trim().toLowerCase() === name.toLowerCase());
+    if (existing) {
+      const overwritten: NoteDetail = { ...existing, content: initialContent, updatedAt: new Date().toISOString() };
+      await putRaw(overwritten);
+      return overwritten;
+    }
+
     const note: NoteDetail = {
       id: generateLocalId(),
-      displayName: finalName,
+      displayName: name,
       content: initialContent,
       // "PENDING_DRIVE" dung tam lam trang thai "chua tung duoc luu len server"
       // o Local Mode - tai su dung enum co san cua backend (SyncState) thay vi
@@ -130,11 +143,28 @@ export const localNotesStore = {
 
   async rename(id: number, newDisplayName: string): Promise<NoteSummary> {
     const all = await getAllRaw();
-    if (nameTaken(all, newDisplayName, id)) {
-      throw new Error("Tên file đã tồn tại, vui lòng chọn tên khác");
+    const source = all.find((n) => n.id === id);
+    if (!source) throw new Error("Khong tim thay note (local)");
+    const newName = newDisplayName.trim();
+
+    const target = all.find(
+      (n) => n.id !== id && n.displayName.trim().toLowerCase() === newName.toLowerCase(),
+    );
+    if (target) {
+      // Khop hanh vi voi backend (NoteServiceImpl.rename): doi ten trung voi
+      // 1 note KHAC dang co -> "ghi de file moi" - note DICH (target) duoc
+      // ghi de bang noi dung note NGUON (source), giu nguyen id cua target.
+      // Note nguon bi xoa (khong con ton tai rieng, da "nhap" vao target).
+      // Tra ve id KHAC id truyen vao de bao hieu FE day la 1 lan merge, khong
+      // phai doi ten binh thuong (xem useRename.ts).
+      const merged: NoteDetail = { ...target, content: source.content, updatedAt: new Date().toISOString() };
+      await putRaw(merged);
+      await deleteRaw(id);
+      const { content: _mergedContent, ...summary } = merged;
+      return summary;
     }
-    const note = await localNotesStore.get(id);
-    const updated: NoteDetail = { ...note, displayName: newDisplayName, updatedAt: new Date().toISOString() };
+
+    const updated: NoteDetail = { ...source, displayName: newName, updatedAt: new Date().toISOString() };
     await putRaw(updated);
     const { content: _content, ...summary } = updated;
     return summary;
