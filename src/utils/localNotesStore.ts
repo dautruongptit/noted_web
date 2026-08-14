@@ -129,6 +129,9 @@ export const localNotesStore = {
       // gia tri nay thanh "pending" tren UI (dung y nghia: "cho dong bo").
       syncState: "PENDING_DRIVE",
       updatedAt: new Date().toISOString(),
+      // Local Mode khong co khai niem "xung dot dong bo" (chi phat sinh o
+      // SyncController khi thiet bi offline reconnect - xem SEC-18) - luon false.
+      conflictCopy: false,
     };
     await putRaw(note);
     return note;

@@ -41,7 +41,12 @@ export function NoteListItem({
       )}
       <span className="doc-icon">▤</span>
       <div className="file-info">
-        <b>{note.name}</b>
+        <b>
+          {note.conflictCopy && (
+            <span className="conflict-badge" title="Bản được tách riêng do phát hiện xung đột đồng bộ">⚠</span>
+          )}
+          {note.name}
+        </b>
         <small>{timeAgo(note.updated)}</small>
       </div>
       {!selectMode && syncDot()}

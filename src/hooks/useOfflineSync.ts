@@ -53,17 +53,22 @@ export function useOfflineSync(onSynced?: (results: SyncBatchResultItem[]) => vo
       const { results } = await syncApi.batch(items);
 
       for (const result of results) {
-        if (result.status === "synced" || result.status === "created") {
+        // "conflict_kept_both" cung XOA khoi hang doi giong "synced"/"created" -
+        // KHAC voi "conflict" cu truoc day (da bo, xem SEC-18): server gio
+        // KHONG con bo ban local nua ma tach thanh 1 note rieng an toan
+        // (conflictCopyId/Name, xem onSynced callback o App.tsx de bao nguoi
+        // dung) - du lieu da chac chan duoc luu, khong can giu lai de retry.
+        if (result.status === "synced" || result.status === "created" || result.status === "conflict_kept_both") {
           const match = items.find((i) =>
             (i.noteId !== null && i.noteId === result.noteId) ||
             (i.clientTempId !== null && i.clientTempId === result.clientTempId)
           );
           if (match) await removePending(match);
         }
-        // "conflict" / "not_found_on_server" / "error": GIU LAI trong hang doi
-        // co tinh - khong tu y xoa du lieu nguoi dung khi chua chac chan server
-        // da nhan dung. UI nen hien thi canh bao rieng cho cac case nay (xem
-        // onSynced callback) thay vi am tham mat du lieu.
+        // "not_found_on_server" / "error": GIU LAI trong hang doi co tinh -
+        // khong tu y xoa du lieu nguoi dung khi chua chac chan server da nhan
+        // dung. UI nen hien thi canh bao rieng cho cac case nay (xem onSynced
+        // callback) thay vi am tham mat du lieu.
       }
 
       onSynced?.(results);

@@ -16,6 +16,7 @@ function toLocalNote(source: NoteSummary | NoteDetail, content = "", contentLoad
     updated: new Date(source.updatedAt),
     contentLoaded,
     syncState: source.syncState,
+    conflictCopy: source.conflictCopy,
   };
 }
 
@@ -256,16 +257,25 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
   // KHONG dong den content/contentLoaded local (tranh ghi de noi dung dang go
   // do nguoi dung chua kip luu). Dung sau khi bam "Dong bo ngay" hoac vua ket
   // noi Drive xong (xem useDriveSync.ts) de cap nhat lai cham dong bo tren sidebar.
+  //
+  // Ngoai ra CON tu them vao danh sach note nao MOI xuat hien tu server ma
+  // "prev" chua co (VD note "ban xung dot" vua duoc tach rieng sau 1 lan
+  // offline-sync conflict - xem SEC-18/useOfflineSync.ts, hoac file moi pull
+  // ve tu Drive) - content note moi se duoc tai lazy khi nguoi dung mo tab,
+  // giong y het luc load danh sach lan dau.
   const refreshSyncStates = async () => {
     try {
       const summaries = await repo.list();
-      const byId = new Map(summaries.map((s) => [s.id, s] as const));
-      setNotes((prev) =>
-        prev.map((n) => {
+      setNotes((prev) => {
+        const byId = new Map(summaries.map((s) => [s.id, s] as const));
+        const updated = prev.map((n) => {
           const fresh = byId.get(n.id);
-          return fresh ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt) } : n;
-        }),
-      );
+          return fresh ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt), conflictCopy: fresh.conflictCopy } : n;
+        });
+        const existingIds = new Set(prev.map((n) => n.id));
+        const newOnes = summaries.filter((s) => !existingIds.has(s.id)).map((s) => toLocalNote(s));
+        return newOnes.length ? [...updated, ...newOnes] : updated;
+      });
     } catch {
       // best-effort - lam moi cham trang thai khong dang de bao loi rieng cho nguoi dung
     }

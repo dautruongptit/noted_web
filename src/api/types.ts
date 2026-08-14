@@ -10,6 +10,8 @@ export type NoteSummary = {
   displayName: string;
   syncState: SyncState;
   updatedAt: string; // ISO datetime string
+  /** TRUE neu day la "ban sao xung dot" tach ra tu SyncController.createConflictCopy() (SEC-18) */
+  conflictCopy: boolean;
 };
 
 /** Khop com.noted.backend.dto.response.NoteDetailResponse - dung khi mo tab, co noi dung */
@@ -58,8 +60,13 @@ export type SyncBatchItem = {
 export type SyncBatchResultItem = {
   noteId?: number;
   clientTempId?: string;
-  status: "created" | "synced" | "conflict" | "not_found_on_server" | "error";
+  // "conflict_kept_both": server phat hien ban local CU hon ban dang co -
+  // KHONG bo ban local nua, da tach thanh 1 note rieng (conflictCopyId/Name)
+  // - xem SyncController.syncBatch(), useOfflineSync.ts.
+  status: "created" | "synced" | "conflict_kept_both" | "not_found_on_server" | "error";
   serverId?: number;
   serverUpdatedAt?: string;
+  conflictCopyId?: number;
+  conflictCopyName?: string;
   message?: string;
 };

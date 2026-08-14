@@ -10,6 +10,7 @@ import { useAuth, type AuthStatus } from "./hooks/useAuth";
 import { authApi } from "./api/authApi";
 import { driveApi } from "./api/driveApi";
 import type { NotesMode } from "./api/notesRepo";
+import type { SyncBatchResultItem } from "./api/types";
 import { migrateLocalNotesToServer } from "./utils/migrateLocalNotes";
 import { DriveCallbackScreen } from "./components/auth/DriveCallbackScreen";
 import { TopBar } from "./components/layout/TopBar";
@@ -75,6 +76,7 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
   const [cursorLine, setCursorLine] = useState(1);
   const [mode, setMode] = useState<NotesMode>("local");
   const [migrating, setMigrating] = useState(false);
+  const [conflictBanner, setConflictBanner] = useState<string | null>(null);
   const migratedRef = useRef(false); // chan migrate chay lai nhieu lan (StrictMode/re-render)
 
   // Ngay khi phat hien DA dang nhap (auth.status === "authenticated") - du la
@@ -122,9 +124,28 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
     };
   }, [mode]);
 
+  // Ket qua "conflict_kept_both" tu offline-sync (SEC-18, xem useOfflineSync.ts/
+  // SyncController.syncBatch): khong con am tham bo ban local nua, ma tach
+  // thanh 1 note rieng - can (1) lam moi danh sach de note do hien ra ngay
+  // trong sidebar, (2) bao cho nguoi dung biet qua banner, tranh ho khong hay
+  // biet gi da xay ra. notesApi duoc khai bao PHIA DUOI closure nay - an toan
+  // vi closure chi thuc su chay SAU khi render xong (giong pattern markSaved()
+  // ngay ben duoi), luc do notesApi da chac chan duoc gan gia tri.
+  const handleOfflineSynced = (results: SyncBatchResultItem[]) => {
+    const conflicts = results.filter((r) => r.status === "conflict_kept_both");
+    if (conflicts.length === 0) return;
+    void notesApi.refreshSyncStates();
+    const names = conflicts.map((c) => c.conflictCopyName).filter(Boolean).join(", ");
+    setConflictBanner(
+      conflicts.length === 1
+        ? `Phát hiện xung đột đồng bộ — bản của bạn đã được lưu riêng thành "${names}"`
+        : `Phát hiện ${conflicts.length} xung đột đồng bộ — các bản đã được lưu riêng: ${names}`,
+    );
+  };
+
   // DUY NHAT 1 instance useOfflineSync o cap cao nhat nay - xem giai thich
   // trong useAutoSave.ts ve ly do khong duoc goi hook nay o nhieu noi.
-  const offlineSync = useOfflineSync();
+  const offlineSync = useOfflineSync(handleOfflineSynced);
 
   // notesApi.newNote() calls markSaved() once autosave is initialized below.
   // Safe: this closure only runs on user interaction, well after render.
@@ -296,6 +317,17 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
       {migrating && (
         <div style={migratingOverlayStyle}>Đang đồng bộ ghi chú lên tài khoản của bạn...</div>
       )}
+
+      {/* Banner canh bao "giu ca 2 ban khi conflict" (SEC-18) - KHONG tu dong
+          an sau vai giay nhu toast thong thuong, vi day la thong bao ve DU LIEU
+          (co 1 ban ghi chua duoc gop), nguoi dung can chu dong bam tat sau khi
+          da doc, tranh bo lo. */}
+      {conflictBanner && (
+        <div style={conflictBannerStyle}>
+          <span>⚠ {conflictBanner}</span>
+          <button style={conflictBannerCloseStyle} onClick={() => setConflictBanner(null)}>×</button>
+        </div>
+      )}
     </main>
   );
 }
@@ -311,4 +343,16 @@ const migratingOverlayStyle: CSSProperties = {
   position: "fixed", bottom: 16, right: 16, zIndex: 50,
   padding: "10px 16px", borderRadius: 8, border: "1px solid #26262a",
   background: "#141416", color: "#f2f2f3", fontSize: 13,
+};
+
+const conflictBannerStyle: CSSProperties = {
+  position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 60,
+  display: "flex", alignItems: "center", gap: 12, maxWidth: "min(560px, calc(100vw - 32px))",
+  padding: "10px 12px 10px 16px", borderRadius: 8, border: "1px solid #c98a1f",
+  background: "#3a2c0f", color: "#f2f2f3", fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+};
+
+const conflictBannerCloseStyle: CSSProperties = {
+  background: "transparent", border: "none", color: "#f2f2f3", fontSize: 18,
+  lineHeight: 1, cursor: "pointer", padding: "0 2px",
 };

@@ -17,6 +17,10 @@ export type Note = {
   // random/mock nhu ban truoc - xem useDriveSync.ts de biet cach anh xa
   // xuong 3 gia tri UI hien co (NoteSyncStatus).
   syncState: SyncState;
+  // TRUE neu day la "ban sao xung dot" tach ra khi dong bo offline phat hien
+  // 2 ban khac nhau cua cung 1 noi dung (SEC-18) - dung de hien badge canh
+  // bao trong sidebar, xem NoteListItem.tsx.
+  conflictCopy: boolean;
 };
 
 export type NoteSyncStatus = "synced" | "pending" | "syncing";
