@@ -25,12 +25,15 @@ export const notesApi = {
     api.post<NoteDetail>("/api/notes", { displayName, initialContent }),
 
   /**
-   * PATCH /api/notes/{id}/content - dung cho ca auto-save (debounce) va
-   * luu thu cong (Ctrl+S). localUpdatedAtEpochMs giup backend/reconciliation
-   * sau nay so sanh thoi diem, mac dinh la "bay gio" neu khong truyen vao.
+   * PATCH /api/notes/{id}/content - dung cho ca auto-save (debounce) va luu
+   * thu cong (Ctrl+S). LUON ghi de, KHONG kiem tra conflict o day (SEC-19,
+   * "phuong an 2" - phien dang go song duoc uu tien hon, tranh UX phuc tap
+   * cho case hiem gap). Response tra ve "version" moi - ben goi (useAutoSave.ts)
+   * can cap nhat lai vao note local de dung lam baseVersion cho lan offline-
+   * queue tiep theo neu co (xem NoteServiceImpl.updateContent()).
    */
-  updateContent: (id: number, content: string, localUpdatedAtEpochMs: number = Date.now()): Promise<NoteDetail> =>
-    api.patch<NoteDetail>(`/api/notes/${id}/content`, { content, localUpdatedAtEpochMs }),
+  updateContent: (id: number, content: string): Promise<NoteDetail> =>
+    api.patch<NoteDetail>(`/api/notes/${id}/content`, { content }),
 
   /**
    * PATCH /api/notes/{id}/rename - doi ten hien thi, KHONG dong den file vat

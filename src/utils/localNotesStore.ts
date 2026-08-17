@@ -114,7 +114,10 @@ export const localNotesStore = {
     // dung go, nen tranh ghi de ngoai y muon o do.
     const existing = all.find((n) => n.displayName.trim().toLowerCase() === name.toLowerCase());
     if (existing) {
-      const overwritten: NoteDetail = { ...existing, content: initialContent, updatedAt: new Date().toISOString() };
+      const overwritten: NoteDetail = {
+        ...existing, content: initialContent, updatedAt: new Date().toISOString(),
+        version: existing.version + 1, // noi dung note CU thay doi -> tang version (SEC-19)
+      };
       await putRaw(overwritten);
       return overwritten;
     }
@@ -132,6 +135,7 @@ export const localNotesStore = {
       // Local Mode khong co khai niem "xung dot dong bo" (chi phat sinh o
       // SyncController khi thiet bi offline reconnect - xem SEC-18) - luon false.
       conflictCopy: false,
+      version: 1, // note MOI hoan toan -> bat dau tu 1 (SEC-19, khop backend)
     };
     await putRaw(note);
     return note;
@@ -139,7 +143,7 @@ export const localNotesStore = {
 
   async updateContent(id: number, content: string): Promise<NoteDetail> {
     const note = await localNotesStore.get(id);
-    const updated: NoteDetail = { ...note, content, updatedAt: new Date().toISOString() };
+    const updated: NoteDetail = { ...note, content, updatedAt: new Date().toISOString(), version: note.version + 1 };
     await putRaw(updated);
     return updated;
   },
@@ -160,14 +164,20 @@ export const localNotesStore = {
       // Note nguon bi xoa (khong con ton tai rieng, da "nhap" vao target).
       // Tra ve id KHAC id truyen vao de bao hieu FE day la 1 lan merge, khong
       // phai doi ten binh thuong (xem useRename.ts).
-      const merged: NoteDetail = { ...target, content: source.content, updatedAt: new Date().toISOString() };
+      const merged: NoteDetail = {
+        ...target, content: source.content, updatedAt: new Date().toISOString(),
+        version: target.version + 1,
+      };
       await putRaw(merged);
       await deleteRaw(id);
       const { content: _mergedContent, ...summary } = merged;
       return summary;
     }
 
-    const updated: NoteDetail = { ...source, displayName: newName, updatedAt: new Date().toISOString() };
+    const updated: NoteDetail = {
+      ...source, displayName: newName, updatedAt: new Date().toISOString(),
+      version: source.version + 1,
+    };
     await putRaw(updated);
     const { content: _content, ...summary } = updated;
     return summary;
@@ -181,7 +191,10 @@ export const localNotesStore = {
       ? `${source.displayName.slice(0, dot)} (copy)${source.displayName.slice(dot)}`
       : `${source.displayName} (copy)`;
     const name = uniqueLocalName(all, base);
-    const copy: NoteDetail = { ...source, id: generateLocalId(), displayName: name, updatedAt: new Date().toISOString() };
+    const copy: NoteDetail = {
+      ...source, id: generateLocalId(), displayName: name, updatedAt: new Date().toISOString(),
+      version: 1, // ban sao la note MOI hoan toan (khop backend duplicate())
+    };
     await putRaw(copy);
     return copy;
   },

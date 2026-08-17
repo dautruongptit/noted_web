@@ -21,6 +21,10 @@ export type Note = {
   // 2 ban khac nhau cua cung 1 noi dung (SEC-18) - dung de hien badge canh
   // bao trong sidebar, xem NoteListItem.tsx.
   conflictCopy: boolean;
+  // So nguyen tang dan moi lan ghi thanh cong - dung lam baseVersion khi day
+  // vao hang doi offline (SEC-19, Optimistic Concurrency Control), KHONG
+  // hien thi tren UI.
+  version: number;
 };
 
 export type NoteSyncStatus = "synced" | "pending" | "syncing";

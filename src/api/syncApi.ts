@@ -6,8 +6,9 @@ export const syncApi = {
    * POST /api/sync/batch - endpoint danh RIENG cho co che offline-first (xem
    * SEC-05 + useOfflineSync.ts): goi 1 LAN kem toan bo thay doi dang cho
    * trong IndexedDB, ngay khi mang vua online lai. Server so sanh
-   * localUpdatedAtEpochMs tung item voi ban dang co de phat hien conflict,
-   * KHONG tu y ghi de neu ban server moi hon.
+   * baseVersion tung item voi version dang co (SEC-19, Optimistic Concurrency
+   * Control) de phat hien conflict - neu lech, KHONG ghi de, tach thanh 1
+   * note "xung dot" rieng (xem NoteServiceImpl.createConflictCopy()).
    *
    * KHONG goi ham nay truc tiep cho luu note thong thuong (auto-save/Ctrl+S)
    * - truong hop do dung notesApi.updateContent(). syncApi.batch() CHI dung

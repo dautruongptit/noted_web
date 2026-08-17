@@ -93,6 +93,7 @@ export function useRename(
                     contentLoaded: true,
                     syncState: result.syncState,
                     updated: new Date(result.updatedAt),
+                    version: result.version,
                   }
                 : x,
             ),

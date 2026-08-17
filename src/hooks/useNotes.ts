@@ -17,6 +17,7 @@ function toLocalNote(source: NoteSummary | NoteDetail, content = "", contentLoad
     contentLoaded,
     syncState: source.syncState,
     conflictCopy: source.conflictCopy,
+    version: source.version,
   };
 }
 
@@ -270,7 +271,9 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
         const byId = new Map(summaries.map((s) => [s.id, s] as const));
         const updated = prev.map((n) => {
           const fresh = byId.get(n.id);
-          return fresh ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt), conflictCopy: fresh.conflictCopy } : n;
+          return fresh
+            ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt), conflictCopy: fresh.conflictCopy, version: fresh.version }
+            : n;
         });
         const existingIds = new Set(prev.map((n) => n.id));
         const newOnes = summaries.filter((s) => !existingIds.has(s.id)).map((s) => toLocalNote(s));

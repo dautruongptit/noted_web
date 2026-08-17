@@ -30,7 +30,7 @@ export async function migrateLocalNotesToServer(): Promise<MigrationResult> {
     clientTempId: String(n.id),
     displayName: n.displayName,
     content: n.content,
-    localUpdatedAtEpochMs: new Date(n.updatedAt).getTime(),
+    baseVersion: null, // note tao moi hoan toan tren server - khong co gi de so sanh (SEC-19)
   }));
 
   try {

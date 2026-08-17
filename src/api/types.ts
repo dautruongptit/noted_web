@@ -12,6 +12,10 @@ export type NoteSummary = {
   updatedAt: string; // ISO datetime string
   /** TRUE neu day la "ban sao xung dot" tach ra tu SyncController.createConflictCopy() (SEC-18) */
   conflictCopy: boolean;
+  // So nguyen tang dan moi lan ghi thanh cong - dung lam "baseVersion" cho
+  // lan sync/offline-queue tiep theo (Optimistic Concurrency Control, SEC-19).
+  // KHONG dung cho so sanh hien thi UI nao - chi la du lieu ky thuat.
+  version: number;
 };
 
 /** Khop com.noted.backend.dto.response.NoteDetailResponse - dung khi mo tab, co noi dung */
@@ -53,19 +57,22 @@ export type SyncBatchItem = {
   clientTempId: string | null;
   displayName: string;
   content: string;
-  localUpdatedAtEpochMs: number;
+  // Version note nay ma client biet GAN NHAT (SEC-19, thay cho
+  // "localUpdatedAtEpochMs" cu de bi lech dong ho) - null khi noteId cung
+  // null (note tao moi hoan toan luc offline, khong co gi de so sanh).
+  baseVersion: number | null;
 };
 
 /** Khop 1 phan tu trong mang "results" tra ve tu POST /api/sync/batch */
 export type SyncBatchResultItem = {
   noteId?: number;
   clientTempId?: string;
-  // "conflict_kept_both": server phat hien ban local CU hon ban dang co -
-  // KHONG bo ban local nua, da tach thanh 1 note rieng (conflictCopyId/Name)
-  // - xem SyncController.syncBatch(), useOfflineSync.ts.
+  // "conflict_kept_both": server phat hien baseVersion client gui LECH voi
+  // version hien tai - KHONG bo ban local nua, da tach thanh 1 note rieng
+  // (conflictCopyId/Name) - xem SyncController.syncBatch(), useOfflineSync.ts.
   status: "created" | "synced" | "conflict_kept_both" | "not_found_on_server" | "error";
   serverId?: number;
-  serverUpdatedAt?: string;
+  serverVersion?: number;
   conflictCopyId?: number;
   conflictCopyName?: string;
   message?: string;

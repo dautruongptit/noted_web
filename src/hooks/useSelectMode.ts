@@ -1,8 +1,9 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { Note } from "../types";
-import { notesApi } from "../api/notesApi";
+import { getNotesRepo, type NotesMode } from "../api/notesRepo";
 
 export function useSelectMode(
+  mode: NotesMode,
   notes: Note[],
   setNotes: Dispatch<SetStateAction<Note[]>>,
   tabs: number[],
@@ -12,6 +13,7 @@ export function useSelectMode(
   closeMenu: () => void,
   newNote: () => void,
 ) {
+  const repo = getNotesRepo(mode);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -39,10 +41,13 @@ export function useSelectMode(
     setBulkDeleting(true);
 
     try {
-      // 1 request DUY NHAT cho ca danh sach (xem notesApi.bulkDelete, khop
-      // POST /api/notes/bulk-delete tu SEC-04) - KHONG loop goi tung
-      // DELETE /api/notes/{id} rieng le (tranh N request khong can thiet).
-      const result = await notesApi.bulkDelete(toDelete);
+      // Goi qua repo (getNotesRepo(mode)) thay vi notesApi truc tiep - o
+      // Local Mode dung localNotesStore.bulkDelete() (IndexedDB), o Server
+      // Mode la 1 request DUY NHAT POST /api/notes/bulk-delete (SEC-04),
+      // KHONG loop goi tung DELETE /api/notes/{id} rieng le. Truoc day goi
+      // thang notesApi.bulkDelete() bat ke mode - lam bulk-delete o Local
+      // Mode bi 401 vi chua dang nhap (bug da sua, cung loai voi useRename.ts).
+      const result = await repo.bulkDelete(toDelete);
       const deletedSet = new Set(result.deletedIds);
 
       const remaining = notes.filter((n) => !deletedSet.has(n.id));

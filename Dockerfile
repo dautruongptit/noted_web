@@ -41,7 +41,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # proxy toi backend - THAY DOI DUOC MA KHONG CAN BUILD LAI IMAGE, chi can doi
 # bien moi truong khi "docker run"/"docker compose up".
 ENV BACKEND_HOST=backend
-ENV BACKEND_PORT=8085
+ENV BACKEND_PORT=8084
 
 EXPOSE 85
 

@@ -22,7 +22,9 @@ export type PendingChange = {
   clientTempId: string | null;
   displayName: string;
   content: string;
-  localUpdatedAtEpochMs: number;
+  /** Version note nay ma client biet GAN NHAT (SEC-19, Optimistic Concurrency
+   *  Control) - null khi noteId cung null (note moi, khong co gi de so sanh). */
+  baseVersion: number | null;
 };
 
 const DB_NAME = "noted-offline";

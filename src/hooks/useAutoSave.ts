@@ -47,9 +47,13 @@ export function useAutoSave(
       // ngay sau moi lan sua, xem backend NoteServiceImpl.updateContent; Local
       // Mode: giu nguyen "PENDING_DRIVE" tam - xem localNotesStore.ts) - cap
       // nhat luon vao local state de sidebar hien dung cham, khong can goi
-      // rieng refreshSyncStates().
+      // rieng refreshSyncStates(). "version" CUNG phai cap nhat lai (SEC-19) -
+      // dung lam baseVersion cho lan offline-queue TIEP THEO neu co, khong
+      // duoc de "cu" (se gay conflict gia tao ngay lan sync sau).
       setNotes((items) =>
-        items.map((n) => (n.id === noteId ? { ...n, updated: new Date(updated.updatedAt), syncState: updated.syncState } : n)),
+        items.map((n) => (n.id === noteId
+          ? { ...n, updated: new Date(updated.updatedAt), syncState: updated.syncState, version: updated.version }
+          : n)),
       );
       setSaveError(false);
       setStatus("saved");
@@ -68,12 +72,15 @@ export function useAutoSave(
       // thoi sap) - KHONG MAT NOI DUNG: ghi vao hang doi offline (IndexedDB
       // qua queueOfflineChange), se tu dong retry khi co mang lai hoac khi
       // job dinh ky 30s chay (xem useOfflineSync.ts, SEC-05/SEC-07).
+      // baseVersion = version note nay ma client biet GAN NHAT (SEC-19) - de
+      // server so sanh o /api/sync/batch, phat hien neu note da bi thiet bi
+      // khac sua trong luc item nay con nam cho trong hang doi.
       await queueOfflineChange({
         noteId,
         clientTempId: null,
         displayName: note.name,
         content: note.content,
-        localUpdatedAtEpochMs: Date.now(),
+        baseVersion: note.version,
       });
       setSaveError(true);
       setStatus("error");

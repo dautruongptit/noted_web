@@ -157,6 +157,7 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
   const drive = useDriveSync(mode, notesApi.notes, autosave.status, notesApi.activeId, notesApi.refreshSyncStates);
   const sidebarResize = useSidebarResize();
   const selectModeApi = useSelectMode(
+    mode,
     notesApi.notes, notesApi.setNotes,
     notesApi.tabs, notesApi.setTabs,
     notesApi.activeId, notesApi.setActiveId,

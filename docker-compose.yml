@@ -16,7 +16,7 @@ services:
         #
         # Chi dat gia tri neu ban CO Y dinh goi THANG toi backend, bo qua proxy
         # (vd deploy FE va BE tren 2 domain/CDN khac nhau khong dung chung nginx):
-        #   VITE_API_BASE_URL: "http://localhost:8085"
+        #   VITE_API_BASE_URL: "http://localhost:8084"
         VITE_API_BASE_URL: ""
     container_name: noted-frontend
     restart: unless-stopped
@@ -27,7 +27,7 @@ services:
       # (vd "noted-backend" - xem docker-compose.yml o repo backend, SEC-01..06),
       # Docker DNS noi bo se tu resolve ten nay sang IP container that.
       BACKEND_HOST: ${BACKEND_HOST:-noted-backend}
-      BACKEND_PORT: ${BACKEND_PORT:-8085}
+      BACKEND_PORT: ${BACKEND_PORT:-8084}
     ports:
       - "85:85"
     networks:
