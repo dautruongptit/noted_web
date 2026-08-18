@@ -71,7 +71,7 @@ function AuthGate() {
 }
 
 function Workspace({ authStatus }: { authStatus: AuthStatus }) {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true); // mac dinh theme den (khong luu lai lua chon giua cac lan tai trang)
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [cursorLine, setCursorLine] = useState(1);
   const [mode, setMode] = useState<NotesMode>("local");
