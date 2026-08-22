@@ -7,6 +7,8 @@ type Props = {
   syncStatus: "idle" | "syncing" | "synced" | "error";
   lastSynced: Date | null;
   noteSyncMap: Record<number, NoteSyncStatus>;
+  /** Thu muc THAT tren Drive (backend tu tao luc ket noi). null = chua co. */
+  driveFolder: { id: string; name: string } | null;
   driveIconChar: string;
   onClose: () => void;
   onConnect: () => void;
@@ -16,7 +18,7 @@ type Props = {
 };
 
 export function DrivePanel({
-  notes, driveConnected, driveConnecting, syncStatus, lastSynced, noteSyncMap, driveIconChar,
+  notes, driveConnected, driveConnecting, syncStatus, lastSynced, noteSyncMap, driveFolder, driveIconChar,
   onClose, onConnect, onCancelConnecting, onSyncNow, onDisconnect,
 }: Props) {
   return (
@@ -60,8 +62,26 @@ export function DrivePanel({
             </div>
             <div className="drive-folder-row">
               <span>📁</span>
-              <div><b>Thư mục đồng bộ</b><small>/Noted Workspace</small></div>
-              <button className="link-btn">Thay đổi</button>
+              <div>
+                <b>Thư mục đồng bộ</b>
+                {/* Ten LAY TU BACKEND, khong viet cung. Ban cu hien "/Noted
+                    Workspace" trong khi ten that la "NotedApp" - nguoi dung tim
+                    trong Drive khong thay, tuong app khong tao thu muc. */}
+                <small>{driveFolder ? driveFolder.name : "Đang tạo..."}</small>
+              </div>
+              {/* Backend tu tao thu muc, nen phai cho nguoi dung mo ra xem tan
+                  mat - neu khong, "tu dong" chi khac "khong lam gi" o cho no im
+                  lang. rel="noreferrer" bat buoc di kem target="_blank". */}
+              {driveFolder && (
+                <a
+                  className="link-btn"
+                  href={`https://drive.google.com/drive/folders/${driveFolder.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Mở trong Drive ↗
+                </a>
+              )}
             </div>
             <div className="drive-notes-list">
               {notes.map((note) => {

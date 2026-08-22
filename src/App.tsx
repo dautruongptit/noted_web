@@ -303,6 +303,7 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           syncStatus={drive.syncStatus}
           lastSynced={drive.lastSynced}
           noteSyncMap={drive.noteSyncMap}
+          driveFolder={drive.driveFolder}
           driveIconChar={drive.driveIcon()}
           onClose={() => drive.setShowDrivePanel(false)}
           onConnect={drive.connectDrive}

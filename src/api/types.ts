@@ -39,7 +39,10 @@ export type CheckNameResult = {
 /** Khop response cua GET /api/drive/status */
 export type DriveStatus = {
   connected: boolean;
+  /** Rong neu chua tao/chua ket noi - dung de dung link mo thu muc tren Drive */
   folderId: string;
+  /** Ten THAT do backend cau hinh (app.drive.app-folder-name), KHONG viet cung o FE */
+  folderName: string;
 };
 
 /** Khop response cua GET /api/auth/me */
