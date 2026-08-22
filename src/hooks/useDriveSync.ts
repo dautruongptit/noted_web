@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Note, NoteSyncStatus } from "../types";
 import type { SyncState } from "../api/types";
 import type { NotesMode } from "../api/notesRepo";
@@ -64,7 +64,19 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
     setNoteSyncMap(map);
   }, [notes]);
 
+  // Chan 2 luot dong bo chay chong nhau. Co TOI 3 duong doc lap cung goi
+  // doSync/sync-all (nut "Đồng bộ ngay", auto-sync 2.5s sau khi luu, va flush
+  // luc dong tab) - truoc day khong duong nao biet duong kia dang chay. Hai
+  // request chong nhau tung lam backend tao ra 2 note y het cho CUNG 1 file
+  // Drive (bug thuc te 2026-08-22, xem "pullingUserIds" o DriveSyncServiceImpl).
+  // Backend da tu khoa lai, day la lop chan thu hai - tranh gui request vo ich.
+  // Dung useRef chu KHONG dung state: can gia tri doc/ghi duoc NGAY lap tuc
+  // trong cung 1 luot render, state cap nhat bat dong bo se van lot request.
+  const syncInFlight = useRef(false);
+
   const doSync = useCallback(async () => {
+    if (syncInFlight.current) return;
+    syncInFlight.current = true;
     setSyncStatus("syncing");
     try {
       await driveApi.syncAll();
@@ -74,6 +86,8 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
     } catch (err) {
       setSyncStatus("error");
       if (err instanceof ApiError) console.warn("Đồng bộ Drive thất bại:", err.message);
+    } finally {
+      syncInFlight.current = false;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshSyncStates]);

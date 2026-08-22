@@ -1,6 +1,6 @@
 ﻿import type { MouseEvent } from "react";
 import type { Note, NoteSyncStatus } from "../../types";
-import { timeAgo } from "../../utils/timeAgo";
+import { timeAgo, fullTimestamp } from "../../utils/timeAgo";
 
 type Props = {
   note: Note;
@@ -47,7 +47,8 @@ export function NoteListItem({
           )}
           {note.name}
         </b>
-        <small>{timeAgo(note.updated)}</small>
+        {/* timeAgo() la ban rut gon co chu y - tooltip giu lai moc chinh xac */}
+        <small title={fullTimestamp(note.updated)}>{timeAgo(note.updated)}</small>
       </div>
       {!selectMode && syncDot()}
       {!selectMode && (

@@ -5,6 +5,7 @@ import { useAutoSave } from "./hooks/useAutoSave";
 import { useDriveSync } from "./hooks/useDriveSync";
 import { useSidebarResize } from "./hooks/useSidebarResize";
 import { useSelectMode } from "./hooks/useSelectMode";
+import { useNoteSort, useSortedNotes } from "./hooks/useNoteSort";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 import { useAuth, type AuthStatus } from "./hooks/useAuth";
 import { authApi } from "./api/authApi";
@@ -156,6 +157,10 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
   );
   const drive = useDriveSync(mode, notesApi.notes, autosave.status, notesApi.activeId, notesApi.refreshSyncStates);
   const sidebarResize = useSidebarResize();
+  // Sap xep CHI la lop hien thi cua sidebar - notesApi.notes giu nguyen thu tu
+  // goc tu server, nen tab/quan he id o cac cho khac khong bi anh huong.
+  const noteSort = useNoteSort();
+  const sortedNotes = useSortedNotes(notesApi.notes, noteSort.sortNotes);
   const selectModeApi = useSelectMode(
     mode,
     notesApi.notes, notesApi.setNotes,
@@ -201,8 +206,10 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
         <Sidebar
           visible={sidebarVisible}
           width={sidebarResize.sidebarWidth}
-          notes={notesApi.notes}
+          notes={sortedNotes}
           activeId={notesApi.activeId}
+          sortMode={noteSort.sortMode}
+          onSortChange={noteSort.setSortMode}
           selectMode={selectModeApi.selectMode}
           selected={selectModeApi.selected}
           driveConnected={drive.driveConnected}

@@ -44,7 +44,16 @@ export function DrivePanel({
             <div className="drive-status-row">
               <span className={`drive-status-icon ${syncStatus}`}>{driveIconChar}</span>
               <div>
-                <b>{syncStatus === "syncing" ? "Đang đồng bộ..." : syncStatus === "synced" ? "Đã đồng bộ" : "Sẵn sàng"}</b>
+                {/* Nhanh "error" TUNG BI THIEU o day: icon doi thanh ⚠ (xem
+                    useDriveSync.driveIcon) nhung chu van ghi "Sẵn sàng" - nguoi
+                    dung khong the biet lan dong bo vua roi that bai. */}
+                <b>
+                  {syncStatus === "syncing" ? "Đang đồng bộ..."
+                    : syncStatus === "synced" ? "Đã đồng bộ"
+                    : syncStatus === "error" ? "Đồng bộ thất bại"
+                    : "Sẵn sàng"}
+                </b>
+                {syncStatus === "error" && <small>Chưa đồng bộ được lên Drive - thử lại sau ít phút.</small>}
                 {lastSynced && <small>Lần cuối: {lastSynced.toLocaleString("vi-VN")}</small>}
               </div>
               <button className="sync-now-btn" onClick={onSyncNow} disabled={syncStatus === "syncing"}>↻ Ngay</button>
