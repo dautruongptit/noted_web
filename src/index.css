@@ -11,24 +11,27 @@ button { font: inherit; cursor: pointer; }
    + overflow:hidden thi vung duy nhat duoc phep dai ra la <textarea> ben trong,
    va no tu cuon - dung nhu ky vong "file dai thi co scroll".
    100dvh de tren mobile thanh dia chi cua trinh duyet an/hien khong lam nhay layout. */
-.app { --bg:#f7f7f5; --surface:#fff; --edge:#e4e4e2; --edge-strong:#d6d6d2; --soft:#f0f0ee; --surface-2:#f5f5f3;
+.app { --bg:#f0f0ed; --surface:#fff; --edge:#e4e4e2; --edge-strong:#d6d6d2; --soft:#f0f0ee; --surface-2:#f5f5f3;
        --text:#16161a; --muted:#6e6e76; --muted-dim:#93939b; --accent:#2f6fd0; --accent-soft:#5a8fe0;
        --warn:#b5762e; --synced:#3a9e63;
        /* Token RIENG cho vung soan thao - GIU NGUYEN gia tri cu, khong doi theo
           bang mau moi. Yeu cau ro: "khong thay doi gi voi khung nhap noi dung". */
        --muted-2:#82828a;
        --editor:#fff; --editor-text:#151515; --editor-edge:#deded9; --editor-line:#a9a9a4; --editor-caret:#e85d24; height:100vh; height:100dvh; overflow:hidden; display:flex; flex-direction:column; color:var(--text); background:var(--bg); transition:.2s ease; }
-.app.dark { --bg:#0d0d0f; --surface:#111114; --edge:#1e1e22; --edge-strong:#26262c; --soft:#1a1a1f; --surface-2:#1c1c21;
-            --text:#e8e8ea; --muted:#9a9aa2; --muted-dim:#5f5f68; --accent:#8ab4f8; --accent-soft:#aecbfa;
+.app.dark { --bg:#0d0d0f; --surface:#151515; --edge:#1e1e22; --edge-strong:#26262c; --soft:#1a1a1f; --surface-2:#1c1c21;
+            --text:#e8e8ea; --muted:#9a9aa2; --muted-dim:#5f5f68; --accent:#ffffc7; --accent-soft:#aecbfa;
             --warn:#c98a3e; --synced:#7fa87f;
             /* Vung soan thao giu nguyen mau cu - xem ghi chu o .app phia tren */
             --muted-2:#7c7c85;
             --editor:#151514; --editor-text:#f5f5f2; --editor-edge:#353533; --editor-line:#a9a9a4; --editor-caret:#e85d24; }
 
 /* ── Topbar ── */
-.topbar { height:52px; flex:none; display:flex; align-items:stretch; border-bottom:1px solid var(--edge); background:var(--surface); }
+/* Nen "khung" (topbar) dung --bg - toi/xam hon --surface mot chut o CA 2 theme
+   - de tab dang ACTIVE (nen --surface) noi bat len giong Chrome that (tab dang
+   mo hoa vao mau trang cua trang, cac tab con lai chim vao mau khung). */
+.topbar { height:52px; flex:none; display:flex; align-items:stretch; border-bottom:1px solid var(--edge); background:var(--bg); }
 /* Nut thu gon sidebar - dung rieng o dau thanh tab (logo da vao sidebar) */
-.sidebar-toggle { flex:none; width:34px; border:0; border-right:1px solid var(--edge); background:transparent; color:var(--muted); font-size:14px; transition:.15s; }
+.sidebar-toggle { flex:none; width:34px; display:grid; place-items:center; border:0; border-right:1px solid var(--edge); background:transparent; color:var(--muted); font-size:14px; transition:.15s; }
 .sidebar-toggle:hover { background:var(--surface-2); color:var(--text); }
 
 /* Hang logo trong sidebar */
@@ -39,28 +42,47 @@ button { font: inherit; cursor: pointer; }
 .brand-mark { display:grid; place-items:center; color:var(--surface); background:var(--text); font-weight:600; width:26px; height:26px; font-size:14px; border-radius:7px; }
 
 /* ── Tabs ── */
-.tabs { min-width:0; display:flex; overflow:auto; scrollbar-width:none; }
-.tab,.new-tab { border:0; border-right:1px solid var(--edge); background:transparent; color:var(--muted); padding:0 13px; display:flex; gap:8px; align-items:center; white-space:nowrap; font-size:13px; transition:.15s; }
-.tab:hover,.new-tab:hover { background:var(--surface-2); color:var(--text); }
-.tab.active { color:var(--text); background:var(--soft); box-shadow:inset 0 2px 0 var(--accent); }
-.file-glyph,.doc-icon { font-family:"JetBrains Mono",monospace; font-size:14px; color:var(--accent); }
-.close { opacity:0; font-size:18px; line-height:12px; color:var(--muted); }
+/* Kieu tab trinh duyet that (theo DOC/Design/Screenshot 2026-08-23 155311.png
+   va 155328.png): goc tren bo tron, tab active "hoa" vao mau trang cua trang
+   (--surface) con tab thuong chim vao mau khung (--bg cua .topbar) - vien
+   phan cach mong CHI giua 2 tab thuong, khong co canh tab active. MOI tab co
+   lai deu nhau khi mo them file (flex-shrink), toi thieu .tab-name (min-width:0
+   + ellipsis) chu khong day tran container - khong scroll ngang, giong Chrome
+   that khi mo nhieu tab. */
+.tabs { flex:1 1 0; min-width:0; display:flex; align-items:flex-end; overflow:hidden; scrollbar-width:none; }
+.tab,.new-tab { flex:none; border:0; background:transparent; color:var(--muted); padding:0 12px; display:flex; gap:7px; align-items:center; white-space:nowrap; font-size:13px; transition:background .15s,color .15s; }
+.tab {
+  position:relative;
+  flex:1 1 180px; min-width:88px; max-width:180px; overflow:hidden;
+  height:38px; margin-bottom:1px; /* de lai 1px cho border-bottom cua .topbar de qua duoi cac tab thuong */
+  border-radius:8px 8px 0 0;
+  box-shadow:inset -1px 0 0 var(--edge); /* vien phan cach mong ben phai, giong Chrome */
+}
+.tab:last-of-type,.tab:has(+ .tab.active) { box-shadow:none; }
+.tab:hover { background:var(--surface-2); color:var(--text); }
+.tab.active {
+  color:var(--text); background:var(--surface); box-shadow:none;
+  height:39px; margin-bottom:0; /* cao hon 1px + xoa margin de de vao dung vach --edge cua .topbar, "hoa" voi noi dung ben duoi */
+}
+/* Tab active thi khong ke vien voi 2 tab ben canh (giong Chrome that) */
+.tab.active + .tab { box-shadow:none; }
+.file-glyph,.doc-icon { flex:none; font-family:"JetBrains Mono",monospace; font-size:14px; color:var(--accent); }
+.tab-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.close { flex:none; width:18px; height:18px; display:grid; place-items:center; border-radius:50%; opacity:0; font-size:16px; line-height:1; color:var(--muted); }
 .tab:hover .close,.tab.active .close { opacity:1; }
-.unsaved { width:6px; height:6px; border-radius:50%; background:var(--accent); }
-.new-tab { font-size:18px; padding:0 13px; }
+.close:hover { background:var(--edge-strong); color:var(--text); }
+.unsaved { flex:none; width:6px; height:6px; border-radius:50%; background:var(--accent); }
+.new-tab { flex:none; align-self:center; width:30px; height:30px; margin:0 4px; border-radius:50%; justify-content:center; font-size:18px; padding:0; }
+.new-tab:hover { background:var(--surface-2); color:var(--text); }
 
 /* ── Top actions ── */
-.top-actions { margin-left:auto; display:flex; align-items:center; padding:0 13px; gap:7px; background:var(--surface); }
+/* Nen trong suot (thua huong --bg cua .topbar) chu khong dung --surface nua -
+   khong thi khoi nay se noi bat len nhu 1 tab active gia, pha vo hieu ung
+   "tab active hoa vao trang" o tren. */
+.top-actions { margin-left:auto; display:flex; align-items:center; padding:0 13px; gap:7px; }
 .save-btn,.mode { color:var(--muted); border:1px solid var(--edge-strong); background:transparent; border-radius:8px; height:30px; padding:0 11px; font-size:12px; transition:.15s; }
 .mode { font-size:17px; width:31px; padding:0; }
 .save-btn:hover,.mode:hover { background:var(--surface-2); color:var(--text); }
-
-/* Drive button */
-.drive-btn { display:grid; place-items:center; width:30px; height:30px; border:1px solid var(--edge-strong); border-radius:8px; background:transparent; color:var(--muted); font-size:15px; transition:.15s; }
-.drive-btn:hover { background:var(--surface-2); color:var(--text); }
-.drive-btn.connected { color:var(--synced); border-color:color-mix(in srgb,var(--synced) 30%,transparent); }
-.drive-btn.syncing { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 30%,transparent); }
-.drive-btn.error { color:#d64d36; }
 
 /* ── Workspace — height must be explicit for sidebar scroll to work ── */
 .workspace { flex:1; min-height:0; display:flex; overflow:hidden; }
@@ -130,12 +152,10 @@ button { font: inherit; cursor: pointer; }
 .file-checkbox.checked { color:var(--accent); }
 
 .file-info { flex:1; min-width:0; }
-/* Tên và thời gian nằm CÙNG hàng (thiết kế mới), thời gian canh phải và không co */
-.file-title-row { display:flex; align-items:baseline; gap:8px; }
-.file-info b { flex:1; min-width:0; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.file-time { flex:none; font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--muted-dim); }
-/* Dòng trích đoạn — LUÔN render (dù rỗng) để mọi dòng cao bằng nhau */
-.file-excerpt { display:block; margin-top:3px; line-height:16px; min-height:16px; font-size:12px; color:var(--muted-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.file-info b { display:block; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Thời gian quay lại quy ước CŨ (trước bản "thiết kế mới"): nằm Ở DƯỚI tên
+   file thay vì cùng hàng - xem NoteListItem.tsx. */
+.file-time { display:block; margin-top:3px; color:var(--muted); font-size:10px; }
 
 .more { border:0; background:transparent; color:var(--muted); font-size:12px; letter-spacing:1px; opacity:0; flex-shrink:0; padding:4px; border-radius:3px; }
 .file-row:hover .more { opacity:1; }
@@ -147,6 +167,7 @@ button { font: inherit; cursor: pointer; }
 .sync-dot.pending { background:var(--muted); opacity:.35; }
 .sync-dot.syncing { background:var(--accent); animation:pulse .7s infinite alternate; }
 .sync-dot.synced { background:var(--synced); }
+.sync-dot.error { background:#d64d36; }
 
 /* Sidebar footer — fixed, never scrolls */
 .side-foot { flex:none; padding:10px 12px; border-top:1px solid var(--edge); display:flex; gap:9px; align-items:center; background:var(--surface); }
@@ -161,6 +182,12 @@ button { font: inherit; cursor: pointer; }
 .side-sync-btn { flex:none; width:30px; height:30px; border:1px solid var(--edge-strong); border-radius:8px; background:transparent; color:var(--muted); font-size:14px; line-height:1; transition:.15s; }
 .side-sync-btn:hover:not(:disabled) { background:var(--surface-2); color:var(--text); }
 .side-sync-btn:disabled { opacity:.5; cursor:not-allowed; }
+/* Nut nay gio la nut trang thai/mo dialog Google Drive (thay cho "Dong bo
+   ngay" truoc day - xem Sidebar.tsx), nen mau doi theo trang thai ket noi
+   giong .drive-status-icon trong DrivePanel. */
+.side-sync-btn.connected { color:var(--synced); border-color:color-mix(in srgb,var(--synced) 30%,transparent); }
+.side-sync-btn.syncing { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 30%,transparent); }
+.side-sync-btn.error { color:#d64d36; }
 .side-foot b { display:block; font-size:12px; font-weight:500; }
 .side-foot small { display:block; color:var(--muted-dim); font-size:11px; margin-top:1px; }
 
@@ -196,6 +223,11 @@ textarea::selection { background:#e85d2440; } /* giu nguyen mau chon van ban cu 
 .save-status.saving { animation:pulse .7s infinite alternate; }
 .save-status.error { background:#d64d36; }
 .status-error-text { color:#d64d36; }
+/* Nut Drive DAY DU (vien + icon) gio nam o TopBar, canh tab (.drive-btn) -
+   o statusbar chi con 1 cham tron nho (.sync-dot) de tham khao nhanh, khong
+   chiem nhieu cho theo prototype moi (DOC/Design/Screenshot 2026-08-23
+   125433.png). */
+.drive-status-dot-btn { border:0; background:transparent; padding:2px; margin:0; cursor:pointer; display:inline-flex; align-items:center; }
 
 /* ── Dropdown menu — rendered fixed, escapes all overflow containers ── */
 .file-menu { z-index:40; width:158px; padding:5px; border:1px solid var(--edge-strong); border-radius:9px; background:var(--surface); box-shadow:0 10px 30px #0006; }
@@ -224,6 +256,10 @@ textarea::selection { background:#e85d2440; } /* giu nguyen mau chon van ban cu 
 .action-confirm { color:var(--surface) !important; background:var(--text) !important; border-color:var(--text) !important; }
 .action-confirm:hover { opacity:.88; }
 .action-confirm:disabled { opacity:.4; cursor:not-allowed; }
+/* Rieng dialog Drive: nut chinh dung mau cam thuong hieu theo prototype moi
+   (DOC/Design/Screenshot 2026-08-23 025234.png) - CHI trong dialog nay, cac
+   dialog khac (Rename...) van giu mau trung tinh nhu tren. */
+.drive-dialog .action-confirm { color:#fff !important; background:#f0812a !important; border-color:#f0812a !important; }
 
 /* Rename dialog */
 .rename-icon { background:color-mix(in srgb,var(--accent) 15%,transparent); }

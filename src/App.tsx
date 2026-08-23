@@ -48,6 +48,15 @@ export default function App() {
   // luong dang nhap thong thuong). Repo khong dung router library nen tu
   // kiem tra pathname truc tiep - an toan vi App() khong goi hook nao truoc do.
   if (window.location.pathname === "/drive/callback") {
+    // Ket noi THANH CONG (2026-08-23): khong giu man hinh callback rieng
+    // (truoc day nguoi dung phai tu bam "Ve Noted") - chuyen VE THANG man
+    // hinh chinh, kem 1 co hieu qua query param de Workspace tu hien thong
+    // bao goc tren-phai roi tu an. That BAI thi VAN giu man hinh day du nhu
+    // cu - loi can nguoi dung chu dong doc, khong nen tu bien mat.
+    if (new URLSearchParams(window.location.search).get("connected") === "true") {
+      window.location.replace("/?driveConnected=1");
+      return null;
+    }
     return <DriveCallbackScreen />;
   }
   return <AuthGate />;
@@ -72,15 +81,16 @@ function AuthGate() {
 }
 
 function Workspace({ authStatus }: { authStatus: AuthStatus }) {
-  // Mac dinh NEN SANG - dung theo giao dien trong file thiet ke. (Truoc day mac
-  // dinh la nen toi; doi lai vi ban thiet ke duoc chot sau.) Lua chon cua nguoi
-  // dung gio DUOC LUU LAI: neu ai thich nen toi thi bam 1 lan la xong, khong
-  // phai bam lai moi lan mo app.
+  // Mac dinh NEN TOI - theo prototype moi nhat (DOC/Design, 2026-08-23). Lua
+  // chon cua nguoi dung van DUOC LUU LAI: neu ai thich nen sang thi bam 1 lan
+  // la xong, khong phai bam lai moi lan mo app - chi nguoi CHUA TUNG bam mac
+  // dinh moi ra nen toi.
   const [dark, setDark] = useState(() => {
     try {
-      return localStorage.getItem("noted-theme") === "dark";
+      const saved = localStorage.getItem("noted-theme");
+      return saved === null ? true : saved === "dark";
     } catch {
-      return false; // localStorage bi chan - khong dang de vo ca app vi 1 tuy chon hien thi
+      return true; // localStorage bi chan - khong dang de vo ca app vi 1 tuy chon hien thi
     }
   });
 
@@ -95,6 +105,20 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
   const [migrating, setMigrating] = useState(false);
   const [conflictBanner, setConflictBanner] = useState<string | null>(null);
   const migratedRef = useRef(false); // chan migrate chay lai nhieu lan (StrictMode/re-render)
+
+  // Toast "da ket noi Google Drive" goc tren-phai (xem App() phia tren) - tu
+  // doc co "?driveConnected=1" tren URL roi XOA NGAY (giong authApi.
+  // handleOAuthCallback) de refresh trang khong hien lai, va tu an sau vai
+  // giay vi day chi la thong bao XAC NHAN thanh cong, khong phai canh bao
+  // can nguoi dung chu dong doc nhu conflictBanner ben duoi.
+  const [driveConnectedToast, setDriveConnectedToast] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("driveConnected") !== "1") return;
+    setDriveConnectedToast(true);
+    window.history.replaceState({}, "", window.location.pathname);
+    const t = setTimeout(() => setDriveConnectedToast(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Ngay khi phat hien DA dang nhap (auth.status === "authenticated") - du la
   // do vua bam "Dang nhap & Dong bo" HAY do trinh duyet con phien cu (cookie
@@ -172,6 +196,28 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
     offlineSync.queueChange, offlineSync.pendingCount,
   );
   const drive = useDriveSync(mode, notesApi.notes, autosave.status, notesApi.activeId, notesApi.refreshSyncStates);
+
+  // Canh bao truoc khi THOAT (dong tab/dong trinh duyet/tai lai trang) neu
+  // con ghi chu CHUA dong bo len Drive. Trinh duyet KHONG cho phep dialog
+  // "beforeunload" tuy chinh nut/hanh dong (VD nut "Dong bo ngay" rieng) vi
+  // ly do bao mat - chi hien duoc hop thoai co san cua trinh duyet ("Roi
+  // trang? Thay doi co the chua duoc luu" + Huy/Roi trang), nen day la cach
+  // gan nhat voi yeu cau "hien thong bao va hoi co dong bo khong": bam Huy se
+  // o lai trang de tu bam dong bo, bam Roi trang thi flush am tham (xem effect
+  // 'pagehide'/'visibilitychange' o tren) van chay truoc khi trang dong.
+  useEffect(() => {
+    if (!drive.driveConnected) return;
+    const hasPending = notesApi.notes.some((n) => drive.noteSyncMap[n.id] !== "synced");
+    if (!hasPending) return;
+
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ""; // can gan de trinh duyet hien dialog - noi dung hien thi la text mac dinh, khong tuy bien duoc
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [drive.driveConnected, drive.noteSyncMap, notesApi.notes]);
+
   const sidebarResize = useSidebarResize();
   // Sap xep CHI la lop hien thi cua sidebar - notesApi.notes giu nguyen thu tu
   // goc tu server, nen tab/quan he id o cac cho khac khong bi anh huong.
@@ -215,7 +261,7 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           activeId={notesApi.activeId}
           sortMode={noteSort.sortMode}
           onSortChange={noteSort.setSortMode}
-          onSyncNow={drive.doSync}
+          onOpenDrivePanel={() => drive.setShowDrivePanel(true)}
           showLoginCta={mode === "local" && authStatus !== "checking"}
           onLoginSync={() => authApi.loginWithGoogle()}
           selectMode={selectModeApi.selectMode}
@@ -342,6 +388,15 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
         <div style={migratingOverlayStyle}>Đang đồng bộ ghi chú lên tài khoản của bạn...</div>
       )}
 
+      {/* Thong bao "da ket noi Google Drive" goc tren-phai, tu an sau vai giay
+          - xem effect doc "?driveConnected=1" o tren. */}
+      {driveConnectedToast && (
+        <div style={driveConnectedToastStyle}>
+          <span style={driveConnectedToastMark}>✓</span>
+          <span>Đã kết nối Google Drive</span>
+        </div>
+      )}
+
       {/* Banner canh bao "giu ca 2 ban khi conflict" (SEC-18) - KHONG tu dong
           an sau vai giay nhu toast thong thuong, vi day la thong bao ve DU LIEU
           (co 1 ban ghi chua duoc gop), nguoi dung can chu dong bam tat sau khi
@@ -360,6 +415,20 @@ const migratingOverlayStyle: CSSProperties = {
   position: "fixed", bottom: 16, right: 16, zIndex: 50,
   padding: "10px 16px", borderRadius: 8, border: "1px solid #26262a",
   background: "#141416", color: "#f2f2f3", fontSize: 13,
+};
+
+const driveConnectedToastStyle: CSSProperties = {
+  position: "fixed", top: 16, right: 16, zIndex: 60,
+  display: "flex", alignItems: "center", gap: 10,
+  padding: "10px 16px", borderRadius: 8, border: "1px solid #2a5a3a",
+  background: "#141416", color: "#f2f2f3", fontSize: 13,
+  boxShadow: "0 10px 30px #0006",
+};
+
+const driveConnectedToastMark: CSSProperties = {
+  display: "flex", alignItems: "center", justifyContent: "center",
+  width: 18, height: 18, borderRadius: "50%",
+  background: "#1f7a3f", color: "#fff", fontSize: 11, flexShrink: 0,
 };
 
 const conflictBannerStyle: CSSProperties = {

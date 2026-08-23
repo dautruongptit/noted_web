@@ -2,12 +2,6 @@
 import type { Note, NoteSyncStatus } from "../../types";
 import { timeAgo, fullTimestamp } from "../../utils/timeAgo";
 
-/** Rut gon noi dung thanh 1 dong xem truoc: bo xuong dong + khoang trang thua */
-function excerpt(content: string): string {
-  const oneLine = content.replace(/\s+/g, " ").trim();
-  return oneLine.length > 90 ? oneLine.slice(0, 90) + "…" : oneLine;
-}
-
 type Props = {
   note: Note;
   isActive: boolean;
@@ -47,21 +41,16 @@ export function NoteListItem({
       )}
       <span className="doc-icon">▤</span>
       <div className="file-info">
-        {/* Ten va thoi gian nam CUNG hang (thiet ke moi) */}
-        <div className="file-title-row">
-          <b>
-            {note.conflictCopy && (
-              <span className="conflict-badge" title="Bản được tách riêng do phát hiện xung đột đồng bộ">⚠</span>
-            )}
-            {note.name}
-          </b>
-          {/* timeAgo() la ban rut gon co chu y - tooltip giu lai moc chinh xac */}
-          <span className="file-time" title={fullTimestamp(note.updated)}>{timeAgo(note.updated)}</span>
-        </div>
-        {/* Dong trich doan - LUON render du rong, de moi dong cao bang nhau.
-            Note chua tung mo thi chua co noi dung (GET /api/notes khong tra ve
-            content), luc do dong nay de trong thay vi lam dong bi thap hon. */}
-        <small className="file-excerpt">{excerpt(note.content)}</small>
+        <b>
+          {note.conflictCopy && (
+            <span className="conflict-badge" title="Bản được tách riêng do phát hiện xung đột đồng bộ">⚠</span>
+          )}
+          {note.name}
+        </b>
+        {/* Chi con TEN (tren) va THOI GIAN (duoi) - bo han dong trich doan noi
+            dung theo yeu cau. timeAgo() la ban rut gon co chu y - tooltip giu
+            lai moc chinh xac. */}
+        <span className="file-time" title={fullTimestamp(note.updated)}>{timeAgo(note.updated)}</span>
       </div>
       {!selectMode && syncDot()}
       {!selectMode && (

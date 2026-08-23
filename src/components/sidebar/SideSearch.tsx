@@ -47,11 +47,9 @@ export function SideSearch({ value, onChange }: Props) {
           aria-label="Tìm ghi chú"
           spellCheck={false}
         />
-        {value ? (
+        
           <button className="side-search-clear" onClick={() => onChange("")} title="Xoá tìm kiếm">×</button>
-        ) : (
-          <kbd>⌘K</kbd>
-        )}
+       
       </div>
     </div>
   );

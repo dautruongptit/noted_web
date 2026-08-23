@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function StatusBar({
-  status, statusLabel, driveConnected, syncStatus, driveIconChar,
+  status, statusLabel, driveConnected, syncStatus,
   onOpenDrivePanel, cursorLine, linesCount, charCount,
 }: Props) {
   return (
@@ -21,12 +21,17 @@ export function StatusBar({
       <div>
         <span className={`save-status ${status}`} />
         <span className={status === "error" ? "status-error-text" : ""}>{statusLabel}</span>
+        {/* Nut Drive DAY DU (icon + vien) da chuyen len TopBar, canh tab (xem
+            TopBar.tsx) - o day chi giu 1 cham tron nho de tham khao nhanh
+            trang thai ma khong chiem cho, bam van mo duoc DrivePanel. */}
         <button
-          className={`drive-status ${driveConnected ? (syncStatus === "syncing" ? "syncing" : syncStatus === "error" ? "error" : "connected") : ""}`}
+          className="drive-status-dot-btn"
           onClick={(e) => { e.stopPropagation(); onOpenDrivePanel(); }}
           title={driveConnected ? "Google Drive đã kết nối" : "Kết nối Google Drive"}
         >
-          <span className={syncStatus === "syncing" && driveConnected ? "spin" : ""}>{driveIconChar}</span>
+          <span
+            className={`sync-dot ${driveConnected ? (syncStatus === "syncing" ? "syncing" : syncStatus === "error" ? "error" : "synced") : "pending"}`}
+          />
         </button>
       </div>
       <div>

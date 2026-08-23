@@ -28,7 +28,12 @@ export function TopBar({
         className="sidebar-toggle"
         onClick={(e) => { e.stopPropagation(); onToggleSidebar(); }}
         title="Ẩn/hiện danh sách"
-      >▤</button>
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+          <path d="M9 3v18" />
+        </svg>
+      </button>
       <div className="tabs">
         {tabs.map((id) => {
           const note = notes.find((n) => n.id === id);
@@ -46,7 +51,9 @@ export function TopBar({
       </div>
       <div className="top-actions">
         <button className="save-btn" onClick={onManualSave} title="Lưu (⌘S)">⌘</button>
-        <button className="mode" onClick={onToggleDark}>{dark ? "☀" : "◐"}</button>
+        <button className="mode" onClick={onToggleDark} title={dark ? "Chuyển sang nền sáng" : "Chuyển sang nền tối"}>
+          {dark ? "☀" : "☾"}
+        </button>
       </div>
     </header>
   );
