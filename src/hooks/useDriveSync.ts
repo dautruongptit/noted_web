@@ -39,6 +39,8 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
   // Truoc day DrivePanel viet cung "/Noted Workspace" - mot cai ten khong ton
   // tai - nen nguoi dung khong the doi chieu duoc voi Drive that cua ho.
   const [driveFolder, setDriveFolder] = useState<{ id: string; name: string } | null>(null);
+  // Email cua tai khoan Google MA DRIVE noi toi (co the KHAC email dang nhap Noted)
+  const [driveAccountEmail, setDriveAccountEmail] = useState("");
   const [driveConnecting, setDriveConnecting] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
@@ -53,12 +55,14 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
     if (mode !== "server") {
       setDriveConnected(false);
       setDriveFolder(null);
+      setDriveAccountEmail("");
       return;
     }
     driveApi.status()
       .then((s) => {
         setDriveConnected(s.connected);
         setDriveFolder(s.folderId ? { id: s.folderId, name: s.folderName } : null);
+        setDriveAccountEmail(s.accountEmail ?? "");
       })
       .catch(() => {}); // loi mang/token het han - giu mac dinh false, khong chan UI khoi doc
   }, [mode]);
@@ -94,7 +98,7 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
       // huu cua minh nen tao thu muc rieng) - neu khong lay lai, panel se hien
       // link tro toi thu muc cu.
       driveApi.status()
-        .then((s) => setDriveFolder(s.folderId ? { id: s.folderId, name: s.folderName } : null))
+        .then((s) => { setDriveFolder(s.folderId ? { id: s.folderId, name: s.folderName } : null); setDriveAccountEmail(s.accountEmail ?? ""); })
         .catch(() => {}); // khong quan trong toi muc phai bao sync that bai
       setSyncStatus("synced");
       setLastSynced(new Date());
@@ -153,6 +157,7 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
     }
     setDriveConnected(false);
     setDriveFolder(null);
+      setDriveAccountEmail("");
     setSyncStatus("idle");
     setLastSynced(null);
     setNoteSyncMap({});
@@ -168,7 +173,7 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
   };
 
   return {
-    driveConnected, driveConnecting, driveFolder, syncStatus, lastSynced, showDrivePanel, setShowDrivePanel,
+    driveConnected, driveConnecting, driveFolder, driveAccountEmail, syncStatus, lastSynced, showDrivePanel, setShowDrivePanel,
     noteSyncMap, doSync, connectDrive, cancelConnecting, disconnectDrive, driveIcon,
   };
 }

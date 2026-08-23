@@ -18,6 +18,7 @@ function toLocalNote(source: NoteSummary | NoteDetail, content = "", contentLoad
     syncState: source.syncState,
     conflictCopy: source.conflictCopy,
     version: source.version,
+    sizeBytes: source.contentSizeBytes ?? 0, // 0 = khong biet (backend khong tra) -> UI tu an
   };
 }
 
@@ -272,7 +273,7 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
         const updated = prev.map((n) => {
           const fresh = byId.get(n.id);
           return fresh
-            ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt), conflictCopy: fresh.conflictCopy, version: fresh.version }
+            ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt), conflictCopy: fresh.conflictCopy, version: fresh.version, sizeBytes: fresh.contentSizeBytes ?? n.sizeBytes }
             : n;
         });
         const existingIds = new Set(prev.map((n) => n.id));

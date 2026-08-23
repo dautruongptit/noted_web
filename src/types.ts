@@ -25,6 +25,9 @@ export type Note = {
   // vao hang doi offline (SEC-19, Optimistic Concurrency Control), KHONG
   // hien thi tren UI.
   version: number;
+  // Kich thuoc noi dung (byte) - hien o bang Google Drive. Lay tu server nen
+  // CO GIA TRI ngay ca voi note chua tung mo (khac voi "content").
+  sizeBytes: number;
 };
 
 export type NoteSyncStatus = "synced" | "pending" | "syncing";

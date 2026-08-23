@@ -50,7 +50,16 @@ async function getAllRaw(): Promise<NoteDetail[]> {
   });
 }
 
+/** So BYTE that su cua noi dung (UTF-8) - khong phai so ky tu, de khop cach
+ *  backend tinh content_size_bytes. Tieng Viet co dau moi ky tu la 2-3 byte. */
+function byteLen(content: string): number {
+  return new TextEncoder().encode(content).length;
+}
+
 async function putRaw(note: NoteDetail): Promise<void> {
+  // Chuan hoa TAI DAY thay vi o tung cho goi: moi duong ghi deu di qua putRaw,
+  // nen kich thuoc khong bao gio bi lech voi noi dung that.
+  note = { ...note, contentSizeBytes: byteLen(note.content) };
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -136,6 +145,7 @@ export const localNotesStore = {
       // SyncController khi thiet bi offline reconnect - xem SEC-18) - luon false.
       conflictCopy: false,
       version: 1, // note MOI hoan toan -> bat dau tu 1 (SEC-19, khop backend)
+      contentSizeBytes: byteLen(initialContent),
     };
     await putRaw(note);
     return note;

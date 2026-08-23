@@ -16,6 +16,11 @@ export type NoteSummary = {
   // lan sync/offline-queue tiep theo (Optimistic Concurrency Control, SEC-19).
   // KHONG dung cho so sanh hien thi UI nao - chi la du lieu ky thuat.
   version: number;
+  /** Kich thuoc noi dung (byte) - dung hien dung luong tung tep o bang Google Drive */
+  // TUY CHON: backend hien KHONG tra truong nay (giu nguyen, khong sua BE).
+  // Local Mode tu tinh duoc nen van co gia tri; Server Mode se la undefined ->
+  // giao dien tu an phan dung luong thay vi hien "0 B" sai su that.
+  contentSizeBytes?: number;
 };
 
 /** Khop com.noted.backend.dto.response.NoteDetailResponse - dung khi mo tab, co noi dung */
@@ -43,6 +48,10 @@ export type DriveStatus = {
   folderId: string;
   /** Ten THAT do backend cau hinh (app.drive.app-folder-name), KHONG viet cung o FE */
   folderName: string;
+  /** Email tai khoan Google MA DRIVE dang noi toi - co the KHAC email dang nhap Noted */
+  // TUY CHON: backend hien KHONG tra truong nay. Thieu thi bang Drive chi an
+  // dong email di, moi thu khac van hoat dong binh thuong.
+  accountEmail?: string;
 };
 
 /** Khop response cua GET /api/auth/me */

@@ -72,7 +72,23 @@ function AuthGate() {
 }
 
 function Workspace({ authStatus }: { authStatus: AuthStatus }) {
-  const [dark, setDark] = useState(true); // mac dinh theme den (khong luu lai lua chon giua cac lan tai trang)
+  // Mac dinh NEN SANG - dung theo giao dien trong file thiet ke. (Truoc day mac
+  // dinh la nen toi; doi lai vi ban thiet ke duoc chot sau.) Lua chon cua nguoi
+  // dung gio DUOC LUU LAI: neu ai thich nen toi thi bam 1 lan la xong, khong
+  // phai bam lai moi lan mo app.
+  const [dark, setDark] = useState(() => {
+    try {
+      return localStorage.getItem("noted-theme") === "dark";
+    } catch {
+      return false; // localStorage bi chan - khong dang de vo ca app vi 1 tuy chon hien thi
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("noted-theme", dark ? "dark" : "light");
+    } catch { /* khong luu duoc thi thoi, van co hieu luc trong phien nay */ }
+  }, [dark]);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [cursorLine, setCursorLine] = useState(1);
   const [mode, setMode] = useState<NotesMode>("local");
@@ -188,20 +204,9 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
 
   return (
     <main className={dark ? "app dark" : "app"} onClick={() => notesApi.setMenuId(null)}>
-      <TopBar
-        dark={dark}
-        onToggleSidebar={() => setSidebarVisible((v) => !v)}
-        tabs={notesApi.tabs}
-        notes={notesApi.notes}
-        activeId={notesApi.activeId}
-        status={autosave.status}
-        onSelectTab={notesApi.setActiveId}
-        onCloseTab={notesApi.closeTab}
-        onNewNote={notesApi.newNote}
-        onManualSave={autosave.manualSave}
-        onToggleDark={() => setDark((d) => !d)}
-      />
-
+      {/* Bo cuc theo THIET KE: SIDEBAR cao het man hinh (logo nam ben trong no),
+          con thanh tab + vung soan thao + thanh trang thai gop thanh MOT COT ben
+          phai. Truoc day topbar/statusbar keo ngang toan bo va cat ngang sidebar. */}
       <section className="workspace">
         <Sidebar
           visible={sidebarVisible}
@@ -210,6 +215,9 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           activeId={notesApi.activeId}
           sortMode={noteSort.sortMode}
           onSortChange={noteSort.setSortMode}
+          onSyncNow={drive.doSync}
+          showLoginCta={mode === "local" && authStatus !== "checking"}
+          onLoginSync={() => authApi.loginWithGoogle()}
           selectMode={selectModeApi.selectMode}
           selected={selectModeApi.selected}
           driveConnected={drive.driveConnected}
@@ -231,29 +239,45 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           <SidebarResizer onMouseDown={sidebarResize.startResize} onDoubleClick={sidebarResize.resetWidth} />
         )}
 
-        {notesApi.active && (
-          <EditorPane
-            content={notesApi.active.content}
-            lines={notesApi.lines}
-            cursorLine={cursorLine}
-            textareaRef={notesApi.textarea}
-            onCursorMove={setCursorLine}
-            onChange={handleChangeContent}
+        <div className="main-col">
+          <TopBar
+            dark={dark}
+            onToggleSidebar={() => setSidebarVisible((v) => !v)}
+            tabs={notesApi.tabs}
+            notes={notesApi.notes}
+            activeId={notesApi.activeId}
+            status={autosave.status}
+            onSelectTab={notesApi.setActiveId}
+            onCloseTab={notesApi.closeTab}
+            onNewNote={notesApi.newNote}
+            onManualSave={autosave.manualSave}
+            onToggleDark={() => setDark((d) => !d)}
           />
-        )}
-      </section>
 
-      <StatusBar
-        status={autosave.status}
-        statusLabel={autosave.statusLabel()}
-        driveConnected={drive.driveConnected}
-        syncStatus={drive.syncStatus}
-        driveIconChar={drive.driveIcon()}
-        onOpenDrivePanel={() => drive.setShowDrivePanel(true)}
-        cursorLine={cursorLine}
-        linesCount={notesApi.lines.length}
-        charCount={notesApi.active?.content.length ?? 0}
-      />
+          {notesApi.active && (
+            <EditorPane
+              content={notesApi.active.content}
+              lines={notesApi.lines}
+              cursorLine={cursorLine}
+              textareaRef={notesApi.textarea}
+              onCursorMove={setCursorLine}
+              onChange={handleChangeContent}
+            />
+          )}
+
+          <StatusBar
+            status={autosave.status}
+            statusLabel={autosave.statusLabel()}
+            driveConnected={drive.driveConnected}
+            syncStatus={drive.syncStatus}
+            driveIconChar={drive.driveIcon()}
+            onOpenDrivePanel={() => drive.setShowDrivePanel(true)}
+            cursorLine={cursorLine}
+            linesCount={notesApi.lines.length}
+            charCount={notesApi.active?.content.length ?? 0}
+          />
+        </div>
+      </section>
 
       {/* Fixed-position dropdown — escapes all overflow containers */}
       {menuNote && (
@@ -304,6 +328,7 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           lastSynced={drive.lastSynced}
           noteSyncMap={drive.noteSyncMap}
           driveFolder={drive.driveFolder}
+          driveAccountEmail={drive.driveAccountEmail}
           driveIconChar={drive.driveIcon()}
           onClose={() => drive.setShowDrivePanel(false)}
           onConnect={drive.connectDrive}
@@ -311,16 +336,6 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           onSyncNow={drive.doSync}
           onDisconnect={drive.disconnectDrive}
         />
-      )}
-
-      {/* Banner "Dang nhap & Dong bo" - CHI hien o Local Mode (chua dang nhap),
-          bam vao se dieu huong dang nhap Google, sau do TU DONG day note len
-          server (xem useEffect migrate o tren). Dung inline style (giong
-          LoginScreen/DriveCallbackScreen, SEC-10) de khong dong den index.css. */}
-      {mode === "local" && authStatus !== "checking" && (
-        <button style={syncBannerStyle} onClick={() => authApi.loginWithGoogle()}>
-          ☁ Đăng nhập & Đồng bộ
-        </button>
       )}
 
       {migrating && (
@@ -340,13 +355,6 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
     </main>
   );
 }
-
-const syncBannerStyle: CSSProperties = {
-  position: "fixed", bottom: 16, right: 16, zIndex: 50,
-  padding: "10px 16px", borderRadius: 8, border: "1px solid #26262a",
-  background: "#f2f2f3", color: "#0b0b0c", fontWeight: 600, fontSize: 13,
-  cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-};
 
 const migratingOverlayStyle: CSSProperties = {
   position: "fixed", bottom: 16, right: 16, zIndex: 50,

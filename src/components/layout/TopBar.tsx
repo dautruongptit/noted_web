@@ -22,9 +22,13 @@ export function TopBar({
 }: Props) {
   return (
     <header className="topbar">
-      <button className="brand" onClick={(e) => { e.stopPropagation(); onToggleSidebar(); }}>
-        <span className="brand-mark">N</span><span>noted</span>
-      </button>
+      {/* Logo da chuyen vao trong sidebar (theo thiet ke) - o day chi con nut
+          thu gon, tach rieng de van bam duoc khi sidebar dang an. */}
+      <button
+        className="sidebar-toggle"
+        onClick={(e) => { e.stopPropagation(); onToggleSidebar(); }}
+        title="Ẩn/hiện danh sách"
+      >▤</button>
       <div className="tabs">
         {tabs.map((id) => {
           const note = notes.find((n) => n.id === id);

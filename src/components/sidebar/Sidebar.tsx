@@ -2,6 +2,7 @@ import { useCallback, useState, type MouseEvent } from "react";
 import type { Note, NoteSyncStatus } from "../../types";
 import { SORT_LABELS, type SortMode } from "../../hooks/useNoteSort";
 import { SelectModeHeader } from "./SelectModeHeader";
+import { SideSearch } from "./SideSearch";
 import { NoteList } from "./NoteList";
 import { SortMenu } from "./SortMenu";
 
@@ -16,8 +17,12 @@ type Props = {
   syncStatus: "idle" | "syncing" | "synced" | "error";
   lastSynced: Date | null;
   noteSyncMap: Record<number, NoteSyncStatus>;
+  /** Hien nut "Dang nhap & Dong bo" o chan sidebar (chi khi CHUA dang nhap) */
+  showLoginCta: boolean;
+  onLoginSync: () => void;
   sortMode: SortMode;
   onSortChange: (mode: SortMode) => void;
+  onSyncNow: () => void;
   onOpenNote: (id: number) => void;
   onNewNote: () => void;
   onEnterSelectMode: () => void;
@@ -31,7 +36,7 @@ type Props = {
 
 export function Sidebar({
   visible, width, notes, activeId, selectMode, selected, driveConnected, syncStatus, lastSynced,
-  noteSyncMap, sortMode, onSortChange, onOpenNote, onNewNote, onEnterSelectMode, onExitSelectMode,
+  noteSyncMap, sortMode, onSortChange, onSyncNow, showLoginCta, onLoginSync, onOpenNote, onNewNote, onEnterSelectMode, onExitSelectMode,
   onToggleSelect, onBulkDeleteRequest, onTouchStart, onTouchEnd, onMoreClick,
 }: Props) {
   // null = dang dong. Luu san toa do luc bam thay vi do lai luc render: menu
@@ -46,8 +51,27 @@ export function Sidebar({
 
   const closeSortMenu = useCallback(() => setSortMenuPos(null), []);
 
+  // Tim kiem chi anh huong DANH SACH HIEN THI o sidebar - khong dung toi tab
+  // dang mo hay note dang soan. Loc theo ten VA noi dung (noi dung chi co voi
+  // note da tung mo - xem ghi chu o .file-excerpt).
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const visibleNotes = q
+    ? notes.filter((n) => n.name.toLowerCase().includes(q) || n.content.toLowerCase().includes(q))
+    : notes;
+
   return (
     <aside className={`sidebar ${visible ? "" : "collapsed"}`} style={visible ? { width } : undefined}>
+      {/* Hang logo - theo thiet ke thi no thuoc SIDEBAR chu khong phai thanh tren
+          cung, nho vay sidebar cao het man hinh va khong bi cat ngang. */}
+      <div className="side-brand">
+        <span className="brand-mark">N</span>
+        <span className="brand-name">noted</span>
+        <button className="side-new-btn" onClick={onNewNote} title="Ghi chú mới">+</button>
+      </div>
+
+      {!selectMode && <SideSearch value={query} onChange={setQuery} />}
+
       {selectMode ? (
         <SelectModeHeader selectedCount={selected.size} onDelete={onBulkDeleteRequest} onCancel={onExitSelectMode} />
       ) : (
@@ -64,13 +88,15 @@ export function Sidebar({
               ⇅
             </button>
             <button className="select-mode-btn" onClick={onEnterSelectMode} title="Chọn nhiều file">☑</button>
-            <button onClick={onNewNote}>+</button>
           </div>
         </div>
       )}
 
+      {q && visibleNotes.length === 0 ? (
+        <div className="file-list"><div className="side-empty">Không tìm thấy ghi chú nào</div></div>
+      ) : (
       <NoteList
-        notes={notes}
+        notes={visibleNotes}
         activeId={activeId}
         selectMode={selectMode}
         selected={selected}
@@ -82,6 +108,7 @@ export function Sidebar({
         onTouchEnd={onTouchEnd}
         onMoreClick={onMoreClick}
       />
+      )}
 
       <div className="side-foot">
         <span className={`cloud-foot ${syncStatus === "syncing" && driveConnected ? "spin" : ""}`}>
@@ -96,7 +123,24 @@ export function Sidebar({
             {driveConnected && syncStatus === "idle" && "Đã kết nối"}
           </small>
         </div>
+        {/* Dong bo nhanh ngay tai chan sidebar, khong phai mo bang Drive.
+            Chi hien khi DA ket noi - chua ket noi thi bam cung khong lam gi. */}
+        {driveConnected && (
+          <button
+            className={`side-sync-btn ${syncStatus === "syncing" ? "spin" : ""}`}
+            onClick={onSyncNow}
+            disabled={syncStatus === "syncing"}
+            title="Đồng bộ ngay"
+          >⟳</button>
+        )}
       </div>
+
+      {/* CTA dang nhap: theo thiet ke no nam TRONG chan sidebar va rong het
+          chieu ngang. Truoc day la 1 banner NOI o goc man hinh, de che mat
+          noi dung va khong an nhap voi phan con lai cua sidebar. */}
+      {showLoginCta && (
+        <button className="side-login-btn" onClick={onLoginSync}>☁ Đăng nhập &amp; Đồng bộ</button>
+      )}
 
       {sortMenuPos && (
         <SortMenu pos={sortMenuPos} value={sortMode} onChange={onSortChange} onClose={closeSortMenu} />

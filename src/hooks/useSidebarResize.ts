@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef, useState, type MouseEvent } from "react";
 
-const DEFAULT_SW = 220;
+const DEFAULT_SW = 264; // khop be rong sidebar trong file thiet ke
 const MIN_SW = 180;
 const MAX_SW = 480;
 
