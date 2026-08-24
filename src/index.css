@@ -339,15 +339,77 @@ textarea::selection { background:#e85d2440; } /* giu nguyen mau chon van ban cu 
 @keyframes spin { to { transform:rotate(360deg); } }
 .spin { display:inline-block; animation:spin .75s linear infinite; }
 
-/* ── Responsive ── */
+/* ── Responsive ──────────────────────────────────────────────────────────
+   Moc 900px: man hinh hep nhung con dung chuot (tablet ngang, cua so nho).
+   Moc 768px: sidebar khong con du cho nam canh vung soan thao -> chuyen han
+              sang dang NGAN KEO phu len tren, mo/dong bang nut da co san.
+   Moc 480px: dien thoai - cat bot cac thong tin phu o thanh trang thai.
+
+   Vung soan thao: cac dieu chinh ben duoi (.line-numbers, textarea) la GIU
+   NGUYEN tu ban cu, khong phai thay doi moi - xem ghi chu o dau file. */
+
+@media (max-width: 900px) {
+  .side-brand { padding:0 12px; }
+  .side-search { padding:0 10px 10px; }
+  .file-list { padding:0 6px 8px; }
+  .drive-dialog { padding:16px; }
+}
+
+/* ── Sidebar dang ngan keo ── */
+@media (max-width: 768px) {
+  /* Tach khoi dong flex, phu LEN TREN vung soan thao thay vi day no hep lai.
+     Be rong dung !important vi App.tsx gan width qua style inline (nguoi dung
+     tu keo) - tren dien thoai thi gia tri do khong con y nghia. */
+  .sidebar {
+    position:fixed; top:0; left:0; bottom:0; z-index:45;
+    width:min(86vw,320px) !important;
+    box-shadow:0 0 40px #0000004d;
+    transform:translateX(0);
+    transition:transform .2s ease;
+  }
+  /* "Dong" = truot ra ngoai man hinh, KHONG phai width:0 nhu tren may ban -
+     giu nguyen be rong de con co hieu ung truot, va de noi dung ben trong
+     khong bi bop lai luc dang chay hieu ung. */
+  .sidebar.collapsed {
+    width:min(86vw,320px) !important;
+    transform:translateX(-100%);
+    border-right:1px solid var(--edge);
+  }
+  /* Lop phu: bam ra ngoai de dong ngan keo. An hoan toan tren may ban. */
+  .sidebar-backdrop { position:fixed; inset:0; z-index:44; background:#00000059; }
+  /* Keo doi be rong khong con y nghia khi sidebar la ngan keo */
+  .sidebar-resizer { display:none; }
+  .tab { max-width:150px; }
+  .tab-name { overflow:hidden; text-overflow:ellipsis; }
+}
+
+@media (min-width: 769px) {
+  /* Chi ton tai o che do ngan keo - tren may ban khong duoc chiem cho */
+  .sidebar-backdrop { display:none; }
+}
+
 @media (max-width: 680px) {
-  .brand { width:54px; padding:0; justify-content:center; }
-  .brand>span:last-child,.save-btn span { display:none; }
   .editor-header { padding:0 16px; }
   .line-numbers { width:48px; padding-right:12px; }
   textarea { padding-right:15px; }
+  .save-btn span { display:none; }
+  /* Bang Drive: van GIU danh sach tep (day moi la noi dung chinh), chi ha
+     bot chieu cao de nut "Xong"/"Ngat ket noi" khong bi day khoi man hinh. */
+  .drive-notes-list { max-height:34vh; }
+  .drive-status-row { flex-wrap:wrap; }
+  .sync-now-btn { margin-left:0; width:100%; }
+  .dialog { padding:20px; }
+}
+
+@media (max-width: 480px) {
+  /* Chi giu lai "Ln" va so dong - phan con lai khong du cho, va cung it dung */
   .statusbar>div:last-child span:nth-child(n+3) { display:none; }
-  .tab { max-width:145px; }
-  .tab-name { overflow:hidden; text-overflow:ellipsis; }
-  .drive-notes-list { display:none; }
+  .statusbar { padding:0 12px; }
+  .topbar { height:48px; }
+  .side-brand { height:48px; }
+  .drive-list-head { flex-wrap:wrap; gap:8px; }
+  .drive-filter { width:100%; }
+  .drive-filter button { flex:1; }
+  .drive-actions { flex-direction:column-reverse; gap:8px; }
+  .drive-actions button { width:100%; }
 }

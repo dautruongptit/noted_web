@@ -99,7 +99,12 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
       localStorage.setItem("noted-theme", dark ? "dark" : "light");
     } catch { /* khong luu duoc thi thoi, van co hieu luc trong phien nay */ }
   }, [dark]);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
+  // Duoi 768px sidebar la NGAN KEO phu len tren noi dung -> mac dinh phai dong,
+  // khong thi mo app len la bi che kin. Tren may ban van mo san nhu cu.
+  // Doc 1 LAN luc khoi tao (khong theo doi resize): nguoi dung xoay may hay keo
+  // cua so giua chung thi khong nen bi tu dong dong/mo trai y.
+  const MOBILE_BP = 768;
+  const [sidebarVisible, setSidebarVisible] = useState(() => window.innerWidth > MOBILE_BP);
   const [cursorLine, setCursorLine] = useState(1);
   const [mode, setMode] = useState<NotesMode>("local");
   const [migrating, setMigrating] = useState(false);
@@ -270,7 +275,13 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           syncStatus={drive.syncStatus}
           lastSynced={drive.lastSynced}
           noteSyncMap={drive.noteSyncMap}
-          onOpenNote={(id) => notesApi.openNote(id, selectModeApi.selectMode)}
+          onOpenNote={(id) => {
+            notesApi.openNote(id, selectModeApi.selectMode);
+            // Che do ngan keo: mo note xong phai dong lai, khong thi note vua
+            // chon bi che ngay boi chinh ngan keo. Khong ap dung o che do chon
+            // nhieu file (nguoi dung con dang tich tiep).
+            if (window.innerWidth <= MOBILE_BP && !selectModeApi.selectMode) setSidebarVisible(false);
+          }}
           onNewNote={notesApi.newNote}
           onEnterSelectMode={() => selectModeApi.enterSelectMode()}
           onExitSelectMode={selectModeApi.exitSelectMode}
@@ -280,6 +291,12 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           onTouchEnd={selectModeApi.handleTouchEnd}
           onMoreClick={notesApi.handleMoreClick}
         />
+
+        {/* Lop phu cua che do ngan keo - bam ra ngoai de dong. Tren may ban
+            CSS an han di nen khong chan tuong tac gi. */}
+        {sidebarVisible && (
+          <div className="sidebar-backdrop" onClick={() => setSidebarVisible(false)} />
+        )}
 
         {sidebarVisible && (
           <SidebarResizer onMouseDown={sidebarResize.startResize} onDoubleClick={sidebarResize.resetWidth} />
