@@ -5,6 +5,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><!-- noteText:title --></title>
+    <!-- Favicon: dat trong public/ nen Vite chep thang sang dist/ luc build,
+         nginx (root /usr/share/nginx/html) phuc vu duoc ngay, khong can sua
+         cau hinh gi them.
+         Nhieu the icon la CO Y - moi noi doc mot kieu: .ico cho trinh duyet cu
+         va thanh dia chi Windows, .png cho trinh duyet hien dai, apple-touch-icon
+         cho man hinh chinh iOS, manifest cho Android/PWA. -->
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <!-- noteText:head-end -->
   </head>
   <body>
