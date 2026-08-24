@@ -22,7 +22,7 @@ type Props = {
   onLoginSync: () => void;
   sortMode: SortMode;
   onSortChange: (mode: SortMode) => void;
-  onSyncNow: () => void;
+  onOpenDrivePanel: () => void;
   onOpenNote: (id: number) => void;
   onNewNote: () => void;
   onEnterSelectMode: () => void;
@@ -36,7 +36,7 @@ type Props = {
 
 export function Sidebar({
   visible, width, notes, activeId, selectMode, selected, driveConnected, syncStatus, lastSynced,
-  noteSyncMap, sortMode, onSortChange, onSyncNow, showLoginCta, onLoginSync, onOpenNote, onNewNote, onEnterSelectMode, onExitSelectMode,
+  noteSyncMap, sortMode, onSortChange, onOpenDrivePanel, showLoginCta, onLoginSync, onOpenNote, onNewNote, onEnterSelectMode, onExitSelectMode,
   onToggleSelect, onBulkDeleteRequest, onTouchStart, onTouchEnd, onMoreClick,
 }: Props) {
   // null = dang dong. Luu san toa do luc bam thay vi do lai luc render: menu
@@ -123,16 +123,16 @@ export function Sidebar({
             {driveConnected && syncStatus === "idle" && "Đã kết nối"}
           </small>
         </div>
-        {/* Dong bo nhanh ngay tai chan sidebar, khong phai mo bang Drive.
-            Chi hien khi DA ket noi - chua ket noi thi bam cung khong lam gi. */}
-        {driveConnected && (
-          <button
-            className={`side-sync-btn ${syncStatus === "syncing" ? "spin" : ""}`}
-            onClick={onSyncNow}
-            disabled={syncStatus === "syncing"}
-            title="Đồng bộ ngay"
-          >⟳</button>
-        )}
+        {/* Truoc day la nut "Dong bo ngay" (goi onSyncNow truc tiep) - gio thay
+            bang nut mo dialog Google Drive day du (DrivePanel co san "Dong bo
+            ngay" ben trong). LUON hien - kha ca khi CHUA ket noi (bam van mo
+            duoc dialog, dialog tu hien man hinh "Ket noi Google Drive" phu
+            hop), mau doi theo trang thai ket noi. */}
+        <button
+          className={`side-sync-btn ${!driveConnected ? "" : syncStatus === "syncing" ? "syncing" : syncStatus === "error" ? "error" : "connected"}`}
+          onClick={onOpenDrivePanel}
+          title={driveConnected ? "Google Drive đã kết nối" : "Kết nối Google Drive"}
+        >⟳</button>
       </div>
 
       {/* CTA dang nhap: theo thiet ke no nam TRONG chan sidebar va rong het
