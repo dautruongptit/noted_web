@@ -41,6 +41,12 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
   const [driveFolder, setDriveFolder] = useState<{ id: string; name: string } | null>(null);
   // Email cua tai khoan Google MA DRIVE noi toi (co the KHAC email dang nhap Noted)
   const [driveAccountEmail, setDriveAccountEmail] = useState("");
+  // Da hoi /api/drive/status xong chua. CAN thiet rieng, khong the suy tu
+  // driveConnected: truoc khi API tra ve thi driveConnected van la false, ma
+  // "false" luc do co nghia "chua biet" chu khong phai "chua ket noi". Thieu
+  // co nay thi goi y bat Drive se nhay ra 1 nhip roi bien mat voi nguoi DA
+  // ket noi san.
+  const [driveStatusLoaded, setDriveStatusLoaded] = useState(false);
   const [driveConnecting, setDriveConnecting] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
@@ -53,6 +59,7 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
   // request thua + log 401 gay nham lan la co loi.
   useEffect(() => {
     if (mode !== "server") {
+      setDriveStatusLoaded(false);
       setDriveConnected(false);
       setDriveFolder(null);
       setDriveAccountEmail("");
@@ -64,6 +71,10 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
         setDriveFolder(s.folderId ? { id: s.folderId, name: s.folderName } : null);
         setDriveAccountEmail(s.accountEmail ?? "");
       })
+      // Danh dau da hoi xong o CA HAI nhanh: that bai cung la mot cau tra loi
+      // (khong ket noi duoc = coi nhu chua ket noi), khong duoc treo mai o
+      // trang thai "chua biet".
+      .finally(() => setDriveStatusLoaded(true))
       .catch(() => {}); // loi mang/token het han - giu mac dinh false, khong chan UI khoi doc
   }, [mode]);
 
@@ -173,7 +184,7 @@ export function useDriveSync(mode: NotesMode, notes: Note[], status: SaveStatus,
   };
 
   return {
-    driveConnected, driveConnecting, driveFolder, driveAccountEmail, syncStatus, lastSynced, showDrivePanel, setShowDrivePanel,
+    driveConnected, driveStatusLoaded, driveConnecting, driveFolder, driveAccountEmail, syncStatus, lastSynced, showDrivePanel, setShowDrivePanel,
     noteSyncMap, doSync, connectDrive, cancelConnecting, disconnectDrive, driveIcon,
   };
 }

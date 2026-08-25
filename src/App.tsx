@@ -109,6 +109,29 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
   const [mode, setMode] = useState<NotesMode>("local");
   const [migrating, setMigrating] = useState(false);
   const [conflictBanner, setConflictBanner] = useState<string | null>(null);
+
+  // Goi y bat sao luu Drive sau khi dang nhap. Ket noi Drive la buoc RIENG voi
+  // dang nhap (co y - dang nhap chi xin openid/email/profile, Drive can scope
+  // rong hon nen Google luon hien man hinh canh bao; gop lai thi ai cung phai
+  // chiu man hinh do du khong dinh dung Drive). Doi lai, nguoi dung phai tu di
+  // tim nut ket noi - goi y nay bu vao cho do.
+  //
+  // Nho lua chon "De sau" qua localStorage: da tu choi 1 lan thi khong hoi lai
+  // moi lan mo app nua.
+  const [driveSuggestionDismissed, setDriveSuggestionDismissed] = useState(() => {
+    try {
+      return localStorage.getItem("noted-drive-suggestion-dismissed") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const dismissDriveSuggestion = () => {
+    setDriveSuggestionDismissed(true);
+    try {
+      localStorage.setItem("noted-drive-suggestion-dismissed", "1");
+    } catch { /* khong luu duoc thi thoi, chi hoi lai o lan mo sau */ }
+  };
   const migratedRef = useRef(false); // chan migrate chay lai nhieu lan (StrictMode/re-render)
 
   // Toast "da ket noi Google Drive" goc tren-phai (xem App() phia tren) - tu
@@ -418,6 +441,29 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
           an sau vai giay nhu toast thong thuong, vi day la thong bao ve DU LIEU
           (co 1 ban ghi chua duoc gop), nguoi dung can chu dong bam tat sau khi
           da doc, tranh bo lo. */}
+      {/* Goi y bat Drive - chi hien khi DA dang nhap, DA biet chac la chua ket
+          noi (driveStatusLoaded, tranh nhay ra 1 nhip voi nguoi da ket noi san),
+          va chua tung bam "De sau". An trong luc dang migrate de khong chong
+          len thong bao do. */}
+      {mode === "server" && drive.driveStatusLoaded && !drive.driveConnected
+        && !driveSuggestionDismissed && !migrating && !drive.showDrivePanel && (
+        <div style={driveSuggestionStyle}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <b style={{ display: "block", fontSize: 13, marginBottom: 2 }}>Bật sao lưu Google Drive?</b>
+            <span style={{ fontSize: 12, color: "#9a9aa2" }}>
+              Ghi chú của bạn sẽ được sao lưu tự động lên Drive.
+            </span>
+          </div>
+          <button style={driveSuggestionLaterStyle} onClick={dismissDriveSuggestion}>Để sau</button>
+          <button
+            style={driveSuggestionCtaStyle}
+            onClick={() => { dismissDriveSuggestion(); drive.setShowDrivePanel(true); }}
+          >
+            Bật ngay
+          </button>
+        </div>
+      )}
+
       {conflictBanner && (
         <div style={conflictBannerStyle}>
           <span>⚠ {conflictBanner}</span>
@@ -446,6 +492,27 @@ const driveConnectedToastMark: CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
   width: 18, height: 18, borderRadius: "50%",
   background: "#1f7a3f", color: "#fff", fontSize: 11, flexShrink: 0,
+};
+
+const driveSuggestionStyle: CSSProperties = {
+  position: "fixed", bottom: 16, right: 16, zIndex: 55,
+  display: "flex", alignItems: "center", gap: 12,
+  maxWidth: "min(420px, calc(100vw - 32px))",
+  padding: "12px 14px", borderRadius: 10, border: "1px solid #26262c",
+  background: "#141416", color: "#f2f2f3",
+  boxShadow: "0 10px 30px #0007",
+};
+
+const driveSuggestionLaterStyle: CSSProperties = {
+  flexShrink: 0, padding: "7px 11px", borderRadius: 8,
+  border: "1px solid #26262c", background: "transparent",
+  color: "#9a9aa2", fontSize: 12, cursor: "pointer",
+};
+
+const driveSuggestionCtaStyle: CSSProperties = {
+  flexShrink: 0, padding: "7px 12px", borderRadius: 8, border: "none",
+  background: "#f2f2f3", color: "#0b0b0c", fontSize: 12, fontWeight: 600,
+  cursor: "pointer",
 };
 
 const conflictBannerStyle: CSSProperties = {
