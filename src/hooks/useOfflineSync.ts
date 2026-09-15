@@ -58,7 +58,8 @@ export function useOfflineSync(onSynced?: (results: SyncBatchResultItem[]) => vo
         // KHONG con bo ban local nua ma tach thanh 1 note rieng an toan
         // (conflictCopyId/Name, xem onSynced callback o App.tsx de bao nguoi
         // dung) - du lieu da chac chan duoc luu, khong can giu lai de retry.
-        if (result.status === "synced" || result.status === "created" || result.status === "conflict_kept_both") {
+        if (result.status === "synced" || result.status === "created"
+            || result.status === "synced_overwritten" || result.status === "conflict_kept_both") {
           const match = items.find((i) =>
             (i.noteId !== null && i.noteId === result.noteId) ||
             (i.clientTempId !== null && i.clientTempId === result.clientTempId)

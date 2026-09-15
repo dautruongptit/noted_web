@@ -52,7 +52,10 @@ export function useAutoSave(
       // duoc de "cu" (se gay conflict gia tao ngay lan sync sau).
       setNotes((items) =>
         items.map((n) => (n.id === noteId
-          ? { ...n, updated: new Date(updated.updatedAt), syncState: updated.syncState, version: updated.version }
+          ? { ...n, updated: new Date(updated.updatedAt), syncState: updated.syncState, version: updated.version,
+              // Vua ghi chinh noi dung nay len server -> noi dung trong editor
+              // dung la cua phien ban vua tra ve.
+              contentVersion: updated.version }
           : n)),
       );
       setSaveError(false);

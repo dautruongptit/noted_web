@@ -82,7 +82,11 @@ export type SyncBatchResultItem = {
   // "conflict_kept_both": server phat hien baseVersion client gui LECH voi
   // version hien tai - KHONG bo ban local nua, da tach thanh 1 note rieng
   // (conflictCopyId/Name) - xem SyncController.syncBatch(), useOfflineSync.ts.
-  status: "created" | "synced" | "conflict_kept_both" | "not_found_on_server" | "error";
+  // "synced_overwritten": item trong hang doi offline da GHI DE mot ban tren
+  // server moi hon (baseVersion lech). Truoc 2026-09-15 truong hop nay tach ra
+  // file "(xung dot ...)" rieng; nay ghi de de chi con 1 file goc duy nhat, va
+  // client tu keo lai noi dung vi ban trong editor da cu.
+  status: "created" | "synced" | "synced_overwritten" | "conflict_kept_both" | "not_found_on_server" | "error";
   serverId?: number;
   serverVersion?: number;
   conflictCopyId?: number;

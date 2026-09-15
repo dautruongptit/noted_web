@@ -28,6 +28,14 @@ export type Note = {
   // Kich thuoc noi dung (byte) - hien o bang Google Drive. Lay tu server nen
   // CO GIA TRI ngay ca voi note chua tung mo (khac voi "content").
   sizeBytes: number;
+  // Noi dung dang nam trong editor thuoc PHIEN BAN nao.
+  //
+  // KHONG dung chung voi "version": refreshSyncStates() nang "version" theo
+  // server o moi lan lam moi danh sach NHUNG co y khong tai noi dung ve. Nen
+  // "version" chi noi "server dang o phien ban nay", con noi dung hien thi thi
+  // co the da cu tu doi nao. Dung "version" de phat hien "co ai vua sua o noi
+  // khac khong" se LUON tra loi sai la khong.
+  contentVersion: number;
 };
 
 export type NoteSyncStatus = "synced" | "pending" | "syncing";

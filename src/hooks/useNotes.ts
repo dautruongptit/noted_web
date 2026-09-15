@@ -18,6 +18,9 @@ function toLocalNote(source: NoteSummary | NoteDetail, content = "", contentLoad
     syncState: source.syncState,
     conflictCopy: source.conflictCopy,
     version: source.version,
+    // Chi coi la "dang giu noi dung cua phien ban nay" khi that su co tai noi
+    // dung ve. Voi ban tom tat (chua mo note) thi de 0 - chua co gi de so sanh.
+    contentVersion: contentLoaded ? source.version : 0,
     sizeBytes: source.contentSizeBytes ?? 0, // 0 = khong biet (backend khong tra) -> UI tu an
   };
 }
@@ -172,6 +175,34 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
   // neu khong co guard nay, 2 lan bam gan nhau se cung tinh uniqueName() tren
   // CUNG 1 state "notes" cu (chua kip cap nhat note vua tao), sinh ra cung 1
   // ten -> lan 2 luon bi backend tu choi 409 DUPLICATE_FILE_NAME.
+  /**
+   * Keo LAI noi dung cua 1 note tu server va ghi de ban dang co trong editor.
+   *
+   * KHAC refreshSyncStates(): ham do co y KHONG dung toi content de khong ghi
+   * de len chu nguoi dung dang go. Ham nay thi nguoc lai - chi duoc goi khi da
+   * chac chan la an toan (khong co sua doi chua luu), hoac khi nguoi dung chu
+   * dong bam "Tai lai ban moi".
+   */
+  const reloadNoteContent = async (id: number) => {
+    try {
+      const detail = await repo.get(id);
+      setNotes((prev) => prev.map((n) => (n.id === id ? toLocalNote(detail, detail.content, true) : n)));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  /** Version cua cac note theo SERVER, dung de biet co ai vua sua o noi khac khong */
+  const fetchServerVersions = async (): Promise<Map<number, number> | null> => {
+    try {
+      const summaries = await repo.list();
+      return new Map(summaries.map((s) => [s.id, s.version] as const));
+    } catch {
+      return null;
+    }
+  };
+
   const creatingNoteRef = useRef(false);
 
   const newNote = async () => {
@@ -304,5 +335,6 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
     menuId, setMenuId, menuPos, deleteId, setDeleteId, textarea,
     loading, loadError,
     openNote, newNote, closeTab, duplicate, download, deleteNote, handleMoreClick, refreshSyncStates,
+    reloadNoteContent, fetchServerVersions,
   };
 }

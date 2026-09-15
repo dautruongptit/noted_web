@@ -110,6 +110,11 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
   const [migrating, setMigrating] = useState(false);
   const [conflictBanner, setConflictBanner] = useState<string | null>(null);
 
+  // Ghi chu dang mo co ban MOI HON tren may chu (ai do vua sua o trinh duyet
+  // khac) VA o day dang co chu chua luu -> khong duoc tu y ghi de ben nao,
+  // phai de nguoi dung chon. Null = khong co gi phai hoi.
+  const [remoteNewer, setRemoteNewer] = useState<number | null>(null);
+
   // Goi y bat sao luu Drive sau khi dang nhap. Ket noi Drive la buoc RIENG voi
   // dang nhap (co y - dang nhap chi xin openid/email/profile, Drive can scope
   // rong hon nen Google luon hien man hinh canh bao; gop lai thi ai cung phai
@@ -168,6 +173,51 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
       }
     })();
   }, [authStatus]);
+
+  // Nhieu trinh duyet cua CUNG 1 nguoi dung cung mo 1 ghi chu: truoc day khong
+  // trinh duyet nao thay thay doi cua trinh duyet kia - refreshSyncStates() co y
+  // khong dung toi content. Hau qua: editor giu noi dung cu vo han, go tiep la
+  // ghi de mat cong ben kia ma khong ai biet.
+  //
+  // Moi lan quay lai tab, doi chieu "version" voi server:
+  //  - Server moi hon VA o day khong co chu chua luu -> keo ve im lang (an toan,
+  //    vi khong co gi cua nguoi dung de mat).
+  //  - Server moi hon NHUNG o day dang co chu chua luu -> KHONG tu quyet, hien
+  //    thanh hoi de nguoi dung chon.
+  // Day la thu khien viec "ghi de, chi giu 1 file" tro nen an toan - bo effect
+  // nay di thi phai xem lai ca quyet dinh o SyncController.
+  useEffect(() => {
+    if (mode !== "server") return;
+
+    const kiemTraBanMoi = async () => {
+      if (document.visibilityState !== "visible") return;
+      const id = notesApi.activeId;
+      if (id === null) return;
+
+      const versions = await notesApi.fetchServerVersions();
+      if (!versions) return; // mat mang - lan sau thu lai
+      const serverVersion = versions.get(id);
+      const local = notesApi.notes.find((n) => n.id === id);
+      // So voi contentVersion (phien ban cua NOI DUNG dang hien), KHONG phai
+      // "version" - xem ghi chu o types.ts. contentVersion = 0 nghia la chua
+      // tung tai noi dung ve, khong co gi de doi chieu.
+      if (serverVersion === undefined || !local || local.contentVersion === 0
+          || serverVersion <= local.contentVersion) return;
+
+      if (autosave.status === "saved") {
+        void notesApi.reloadNoteContent(id);
+      } else {
+        setRemoteNewer(id);
+      }
+    };
+
+    window.addEventListener("focus", kiemTraBanMoi);
+    document.addEventListener("visibilitychange", kiemTraBanMoi);
+    return () => {
+      window.removeEventListener("focus", kiemTraBanMoi);
+      document.removeEventListener("visibilitychange", kiemTraBanMoi);
+    };
+  });
 
   // Kenh thu 3 cua "Debounce Sync": flush dong bo NGAY khi nguoi dung dong
   // tab/roi trang (chi co tac dung o Server Mode - Local Mode khong co gi de
@@ -464,6 +514,32 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
         </div>
       )}
 
+      {/* Ban tren may chu moi hon nhung o day dang co chu chua luu - de nguoi
+          dung chon, khong tu quyet ben nao. */}
+      {remoteNewer !== null && (
+        <div style={remoteNewerStyle}>
+          <span style={{ flex: 1 }}>
+            Ghi chú này vừa được sửa ở nơi khác. Bạn đang có thay đổi chưa lưu.
+          </span>
+          <button
+            style={remoteNewerKeepStyle}
+            onClick={() => setRemoteNewer(null)}
+          >
+            Giữ bản của tôi
+          </button>
+          <button
+            style={remoteNewerReloadStyle}
+            onClick={async () => {
+              const id = remoteNewer;
+              setRemoteNewer(null);
+              await notesApi.reloadNoteContent(id);
+            }}
+          >
+            Tải lại bản mới
+          </button>
+        </div>
+      )}
+
       {conflictBanner && (
         <div style={conflictBannerStyle}>
           <span>⚠ {conflictBanner}</span>
@@ -513,6 +589,25 @@ const driveSuggestionCtaStyle: CSSProperties = {
   flexShrink: 0, padding: "7px 12px", borderRadius: 8, border: "none",
   background: "#f2f2f3", color: "#0b0b0c", fontSize: 12, fontWeight: 600,
   cursor: "pointer",
+};
+
+const remoteNewerStyle: CSSProperties = {
+  position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 60,
+  display: "flex", alignItems: "center", gap: 10,
+  maxWidth: "min(620px, calc(100vw - 32px))",
+  padding: "10px 12px 10px 16px", borderRadius: 8, border: "1px solid #3a6ea5",
+  background: "#12253a", color: "#f2f2f3", fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+};
+
+const remoteNewerKeepStyle: CSSProperties = {
+  flexShrink: 0, padding: "6px 10px", borderRadius: 7,
+  border: "1px solid #3a6ea5", background: "transparent",
+  color: "#cfe0f5", fontSize: 12, cursor: "pointer",
+};
+
+const remoteNewerReloadStyle: CSSProperties = {
+  flexShrink: 0, padding: "6px 11px", borderRadius: 7, border: "none",
+  background: "#f2f2f3", color: "#0b0b0c", fontSize: 12, fontWeight: 600, cursor: "pointer",
 };
 
 const conflictBannerStyle: CSSProperties = {
