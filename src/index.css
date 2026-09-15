@@ -204,16 +204,15 @@ button { font: inherit; cursor: pointer; }
    dung chung) de vung soan thao GIU NGUYEN 100% khi vo app doi sang giao dien moi. */
 .editor-header { height:55px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 28px; border-bottom:1px solid var(--editor-edge); font-family:"DM Mono"; font-size:10px; color:var(--editor-line); }
 .editor-header span:first-child { color:var(--editor-text); }
-.editor-wrap { flex:1; min-height:0; display:flex; overflow:hidden; padding:25px 0; }
+/* Vo chua CodeMirror. Khong con display:flex + cot so dong rieng nua - CodeMirror
+   tu dung gutter va tu lo viec cuon dong bo giua so dong voi noi dung. */
+.editor-wrap { flex:1; min-height:0; overflow:hidden; padding:25px 0 0; }
+.editor-wrap .cm-editor { height:100%; }
 /* overflow:hidden de EditorPane co the cuon cot so dong bang JS cho khop voi
    textarea (thanh cuon that chi hien o textarea, xem onScroll trong EditorPane).
    padding-bottom PHAI bang padding-bottom cua textarea, neu khong chieu cao cuon
    cua 2 ben lech nhau va so dong bi le o cuoi file. */
-.line-numbers { width:66px; flex:none; user-select:none; overflow:hidden; padding-right:18px; padding-bottom:40px; text-align:right; color:var(--editor-line); font:13px/25px "DM Mono",monospace; }
-.line-numbers span { display:block; }
-.line-numbers .current { color:var(--editor-caret); }
-textarea { resize:none; outline:0; border:0; color:var(--editor-text); background:transparent; width:100%; padding:0 30px 40px 0; font:13px/25px "DM Mono",Consolas,monospace; caret-color:var(--editor-caret); overflow:auto; }
-textarea::selection { background:#e85d2440; } /* giu nguyen mau chon van ban cu */
+
 
 /* ── Status bar ── */
 .statusbar { height:30px; flex:none; padding:0 18px; display:flex; align-items:center; justify-content:space-between; font:10.5px "JetBrains Mono",monospace; color:var(--muted-dim); background:var(--surface); border-top:1px solid var(--edge); }
@@ -390,8 +389,6 @@ textarea::selection { background:#e85d2440; } /* giu nguyen mau chon van ban cu 
 
 @media (max-width: 680px) {
   .editor-header { padding:0 16px; }
-  .line-numbers { width:48px; padding-right:12px; }
-  textarea { padding-right:15px; }
   .save-btn span { display:none; }
   /* Bang Drive: van GIU danh sach tep (day moi la noi dung chinh), chi ha
      bot chieu cao de nut "Xong"/"Ngat ket noi" khong bi day khoi man hinh. */
