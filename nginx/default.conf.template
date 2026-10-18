@@ -8,7 +8,7 @@
 # roi ghi ket qua ra /etc/nginx/conf.d/default.conf truoc khi nginx start.
 #
 # Ly do dung reverse proxy thay vi de FE goi thang toi backend:
-#  - Trinh duyet chi thay 1 origin DUY NHAT (vd http://localhost:85) ->
+#  - Trinh duyet chi thay 1 origin DUY NHAT (vd http://localhost:8200) ->
 #    KHONG CON VAN DE CORS gi ca (khong can ALLOWED_ORIGINS whitelist phuc tap
 #    nhu da cau hinh o backend SecurityConfig).
 #  - Cookie httpOnly "refresh_token" (path=/api/auth, xem SEC-06) hoat dong
@@ -16,7 +16,7 @@
 # ==========================================================
 
 server {
-    listen 85;
+    listen ${PORT};
     server_name _;
 
     root /usr/share/nginx/html;
@@ -24,8 +24,8 @@ server {
 
     # ---- Reverse proxy toi Backend Spring Boot ----
     # BACKEND_HOST / BACKEND_PORT duoc thay the boi envsubst luc container start.
-    # Trong docker-compose cung dev-network, BACKEND_HOST thuong la TEN SERVICE
-    # (vd "noted-backend"), Docker DNS noi bo se tu resolve sang IP container.
+    # Trong docker-compose cung noted-net, BACKEND_HOST thuong la TEN SERVICE
+    # (vd "noted-api"), Docker DNS noi bo se tu resolve sang IP container.
     location /api/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/api/;
         proxy_http_version 1.1;

@@ -26,24 +26,27 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN pnpm build
 
 # ==========================================================
-# Stage 2 — Serve bang Nginx, cong 85
+# Stage 2 — Serve bang Nginx (non-root), cong 8200
 # ==========================================================
-FROM nginx:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 
 # Xoa config mac dinh, dung template rieng (xem giai thich trong file template)
+USER root
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 COPY --from=build /app/dist /usr/share/nginx/html
+USER nginx
 
 # Bien moi truong RUNTIME (khac VITE_API_BASE_URL o tren): day la bien nginx
 # doc luc CONTAINER KHOI DONG (qua envsubst, xem template), dung de dung reverse
 # proxy toi backend - THAY DOI DUOC MA KHONG CAN BUILD LAI IMAGE, chi can doi
 # bien moi truong khi "docker run"/"docker compose up".
-ENV BACKEND_HOST=backend
-ENV BACKEND_PORT=8084
+ENV BACKEND_HOST=noted-api
+ENV BACKEND_PORT=8210
+ENV PORT=8200
 
-EXPOSE 85
+EXPOSE 8200
 
 # nginx:1.27 image co san entrypoint tu dong chay envsubst tren moi file trong
 # /etc/nginx/templates/*.template -> ghi ra /etc/nginx/conf.d/*.conf truoc khi
