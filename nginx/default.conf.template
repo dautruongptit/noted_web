@@ -15,6 +15,17 @@
 #    dung vi request toi /api/auth/refresh van la same-origin voi trang FE.
 # ==========================================================
 
+# Giao thuc THAT ma nguoi dung dung. nginx nay nam SAU Cloudflare Tunnel: tunnel
+# noi toi nginx bang HTTP thuong, nen $scheme luon la "http" du nguoi dung vao
+# bang https. Truoc day truyen thang $scheme cho backend -> Spring dung redirect_uri
+# "http://noted.../login/oauth2/code/google" -> Google tu choi ("khong ket noi
+# duoc"/redirect_uri_mismatch). Cloudflare gui san X-Forwarded-Proto: https, nen
+# uu tien header do; neu khong co (truy cap truc tiep qua localhost) thi dung $scheme.
+map $http_x_forwarded_proto $noted_proto {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+
 server {
     listen ${PORT};
     server_name _;
@@ -33,7 +44,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $noted_proto;
 
         # Dam bao Set-Cookie tu backend (refresh_token httpOnly) duoc forward
         # dung path, khong bi nginx tu y doi domain/path cua cookie.
@@ -49,14 +60,14 @@ server {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/oauth2/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $noted_proto;
     }
 
     location /login/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/login/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $noted_proto;
     }
 
     # ---- SPA fallback ----
