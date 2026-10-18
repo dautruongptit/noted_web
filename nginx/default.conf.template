@@ -30,6 +30,12 @@ server {
     listen ${PORT};
     server_name _;
 
+    # Moi chuyen huong do nginx tu sinh (VD them dau "/" cuoi) phai la duong dan
+    # tuong doi, KHONG kem cong noi bo 8200: nginx nam sau Cloudflare Tunnel nen
+    # cong do khong the truy cap tu ben ngoai.
+    absolute_redirect off;
+    port_in_redirect off;
+
     root /usr/share/nginx/html;
     index index.html;
 
@@ -63,8 +69,15 @@ server {
         proxy_set_header X-Forwarded-Proto $noted_proto;
     }
 
-    location /login/ {
-        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/login/;
+    # CHI proxy /login/oauth2/ (callback Google). Truoc day la /login/: khi dang
+    # nhap that bai backend chuyen ve "/login?error", nginx thay request khop 1
+    # location co dau "/" cuoi nen TU chuyen huong sang "/login/?error" va gan
+    # them cong 8200 (port_in_redirect) -> "https://noted...:8200/login/?error".
+    # Cong 8200 chi mo o 127.0.0.1, Cloudflare Tunnel chi phuc vu 443, nen trinh
+    # duyet treo toi het gio (ERR_CONNECTION_TIMED_OUT) thay vi hien trang dang
+    # nhap. Thu hep location thi "/login?error" roi xuong SPA o "location /".
+    location /login/oauth2/ {
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/login/oauth2/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Proto $noted_proto;
