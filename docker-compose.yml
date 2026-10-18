@@ -17,7 +17,11 @@ services:
         # Chi dat gia tri neu ban CO Y dinh goi THANG toi backend, bo qua proxy
         # (vd deploy FE va BE tren 2 domain/CDN khac nhau khong dung chung nginx):
         #   VITE_API_BASE_URL: "http://localhost:8210"
-        VITE_API_BASE_URL: ""
+        # Tu 2026-10-18: goi THANG backend qua tunnel noted-api.* (callback Google
+        # cung tro vao do), khong con di qua nginx proxy. Gia tri duoc NUONG vao
+        # JS luc BUILD nen doi thi phai build lai image. Ghi de bang bien
+        # VITE_API_BASE_URL trong .env neu can (vd tro ve "" de dung proxy nginx).
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://noted-api.thongtinchinhhieu.site}
     image: noted-web:latest
     container_name: noted-web
     restart: unless-stopped
