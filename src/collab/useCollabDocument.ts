@@ -19,6 +19,7 @@ import {
   collabServerUrl,
   encodeTextSnapshot,
 } from "./collabProtocol";
+import { createCrossDeviceUndoManager } from "./crossDeviceUndo";
 
 export type CollabConnectionStatus = "connecting" | "connected" | "offline";
 
@@ -110,13 +111,14 @@ export function useCollabDocument(options: Options) {
 
     const doc = new Y.Doc();
     const ytext = doc.getText(TEXT_ROOT_NAME);
-    const undoManager = new Y.UndoManager(ytext);
     const persistence = new IndexeddbPersistence(collabDatabaseName(userId, noteId, generation), doc);
     const provider = new WebsocketProvider(collabServerUrl(), String(noteId), doc, {
       connect: false, // can access token truoc khi mo ket noi (xem connectWithFreshToken)
       params: { generation: String(generation) },
       maxBackoffTime: 10_000,
     });
+    // Ctrl+Z/Ctrl+Y hoan tac ca chu CUNG user go o thiet bi/tab khac (xem crossDeviceUndo.ts).
+    const { undoManager, dispose: disposeUndoManager } = createCrossDeviceUndoManager(ytext, provider, userId);
 
     let disposed = false;
     let snapshotTimer: number | null = null;
@@ -124,6 +126,8 @@ export function useCollabDocument(options: Options) {
     let pendingSnapshot = readPendingFlag(noteId);
 
     provider.awareness.setLocalStateField("user", {
+      // id: de thiet bi khac biet thay doi nay cua user nao (hoan tac theo user)
+      id: userId,
       name: userName,
       color: CURSOR_COLORS[doc.clientID % CURSOR_COLORS.length],
       colorLight: `${CURSOR_COLORS[doc.clientID % CURSOR_COLORS.length]}33`,
@@ -241,7 +245,7 @@ export function useCollabDocument(options: Options) {
       flushRef.current = () => {};
       provider.destroy();
       void persistence.destroy();
-      undoManager.destroy();
+      disposeUndoManager();
       doc.destroy();
     };
     // userName chi dung luc khoi tao awareness, doi ten giua chung khong dang mo lai tai lieu

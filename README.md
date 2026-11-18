@@ -59,7 +59,8 @@ src/
                           localNotesStore.ts (IndexedDB), offlineQueue.ts, localBackup.ts,
                           migrateLocalNotes.ts, session.ts, timeAgo.ts, uniqueName.ts
   collab/               ← soạn thảo cộng tác: collabProtocol.ts (mã message/mã đóng, khớp backend
-                          YjsProtocol), useCollabDocument.ts (Y.Doc + IndexedDB + WebSocket)
+                          YjsProtocol), useCollabDocument.ts (Y.Doc + IndexedDB + WebSocket),
+                          crossDeviceUndo.ts (Ctrl+Z/Ctrl+Y theo user trên mọi thiết bị)
   config/env.ts         ← nơi DUY NHẤT đọc import.meta.env.VITE_*
 ```
 
@@ -75,8 +76,17 @@ src/
       gửi bù đúng phần thiếu, rồi hợp nhất không xung đột.
   - `EditorPane` gắn CodeMirror vào `Y.Text("content")` bằng `yCollab` (`y-codemirror.next`):
     hiện con trỏ và tên của thiết bị khác.
-  - **Ctrl+Z / Ctrl+Y** dùng `Y.UndoManager`. Nó chỉ theo dõi thay đổi do chính editor này tạo ra,
-    nên Undo chỉ xóa phần chữ của mình, không đụng chữ thiết bị khác vừa hợp nhất vào.
+  - **Ctrl+Z / Ctrl+Y theo user, không theo thiết bị** (`crossDeviceUndo.ts`, dùng `Y.UndoManager`).
+    Cùng một user đăng nhập nhiều nơi thì Ctrl+Z ở máy nào cũng gỡ được chữ user đó vừa gõ, kể cả
+    chữ gõ ở máy/tab khác.
+    - Chữ của user **khác** thì không gỡ: so `clientID` người gõ với `user.id` trong awareness.
+    - Dữ liệu nạp lúc mở note (IndexedDB, log server phát lại) **không** vào lịch sử hoàn tác. Nếu
+      vào, Ctrl+Z trên thiết bị mới sẽ xóa sạch note. Mốc "đã nạp xong" là lúc server gửi step1 rỗng.
+    - Vì vậy chữ máy khác gõ **trong lúc máy này mất mạng** cũng không hoàn tác được ở máy này. Chỉ
+      thay đổi đến trực tiếp khi đang kết nối mới hoàn tác được.
+    - Chữ hai máy gõ sát nhau được tách thành các bước Ctrl+Z riêng.
+    - Giới hạn: Yjs không ghi lại ai đã **xóa**, nên phần xóa ở máy khác luôn được nhận là của user
+      này. Hiện đúng vì backend chỉ cho chủ note vào phòng; khi có chia sẻ note phải siết lại.
   - Mỗi phím gõ đi qua WebSocket, **không** qua REST. Sau 1.5s ngừng gõ, client gửi ảnh chụp text
     (message `100`). Backend ghi file `.txt` rồi đẩy lên Drive như cũ. Khi nhận ack (`101`) thì hiện
     "Đã lưu". Chưa nhận được ack thì cờ được giữ trong localStorage và gửi lại sau khi kết nối và
