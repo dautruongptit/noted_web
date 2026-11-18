@@ -7,6 +7,10 @@ import type { Awareness } from "y-protocols/awareness";
 import { getAccessToken } from "../utils/authToken";
 import { refreshAccessToken } from "../utils/apiClient";
 import {
+  META_APPLIED_MERGE_ID,
+  META_MAP_NAME,
+  MESSAGE_PENDING_MERGE,
+  encodeMergeApplied,
   CLOSE_DOCUMENT_REPLACED,
   CLOSE_NOTE_DELETED,
   CLOSE_NOTE_NOT_FOUND,
@@ -20,6 +24,7 @@ import {
   encodeTextSnapshot,
 } from "./collabProtocol";
 import { createCrossDeviceUndoManager } from "./crossDeviceUndo";
+import { applyTextChange, mergeThreeWay } from "./externalMerge";
 
 export type CollabConnectionStatus = "connecting" | "connected" | "offline";
 
@@ -43,11 +48,13 @@ type Options = {
   onSnapshotSaved: (noteId: number, version: number) => void;
   onSnapshotRejected: (noteId: number) => void;
   /**
-   * Noi dung note bi ghi de tu ngoai (Drive, REST...) - phai tai lai note de lay
-   * doi tai lieu moi. {@code unsavedText} khac null khi tai lieu cu con thay doi
-   * chua tung duoc server xac nhan (VD go luc offline) - nguoi goi nen cat giu.
+   * Doi tai lieu tren server da doi (4409) - tai lai note de mo theo doi moi.
+   * Hien backend khong con duong nao doi tai lieu (noi dung ngoai duoc hop nhat,
+   * xem onMergeConflict) - giu de an toan neu sau nay can bo 1 tai lieu hong.
    */
-  onDocumentReplaced: (noteId: number, unsavedText: string | null) => void;
+  onDocumentReplaced: (noteId: number) => void;
+  /** Hop nhat noi dung tu Drive/REST co doan bi sua o ca 2 noi - da giu ca 2 ban trong file. */
+  onMergeConflict: (noteId: number, sourceLabel: string, conflictCount: number) => void;
   onNoteGone: (noteId: number) => void;
 };
 
@@ -111,6 +118,7 @@ export function useCollabDocument(options: Options) {
 
     const doc = new Y.Doc();
     const ytext = doc.getText(TEXT_ROOT_NAME);
+    const metaMap = doc.getMap<unknown>(META_MAP_NAME);
     const persistence = new IndexeddbPersistence(collabDatabaseName(userId, noteId, generation), doc);
     const provider = new WebsocketProvider(collabServerUrl(), String(noteId), doc, {
       connect: false, // can access token truoc khi mo ket noi (xem connectWithFreshToken)
@@ -118,7 +126,7 @@ export function useCollabDocument(options: Options) {
       maxBackoffTime: 10_000,
     });
     // Ctrl+Z/Ctrl+Y hoan tac ca chu CUNG user go o thiet bi/tab khac (xem crossDeviceUndo.ts).
-    const { undoManager, dispose: disposeUndoManager } = createCrossDeviceUndoManager(ytext, provider, userId);
+    const { undoManager, dispose: disposeUndoManager } = createCrossDeviceUndoManager(ytext, provider, userId, metaMap);
 
     let disposed = false;
     let snapshotTimer: number | null = null;
@@ -196,6 +204,32 @@ export function useCollabDocument(options: Options) {
       }
     };
 
+    // Server giao 1 lan hop nhat (noi dung tu Drive/REST) cho DUNG thiet bi nay.
+    // Hop nhat 3 chieu vao Y.Text hien tai -> chi 1 file, giu chu dang go chua
+    // luu; doan bi sua o ca 2 noi duoc giu ca 2 ban co dau danh dau.
+    const mergeOrigin = { kind: "external-merge" };
+    provider.messageHandlers[MESSAGE_PENDING_MERGE] = (_encoder, decoder) => {
+      const mergeId = decoding.readVarUint(decoder);
+      const base = decoding.readVarString(decoder);
+      const incoming = decoding.readVarString(decoder);
+      const sourceLabel = decoding.readVarString(decoder);
+
+      const applied = metaMap.get(META_APPLIED_MERGE_ID);
+      if (typeof applied !== "number" || applied < mergeId) {
+        const current = ytext.toString();
+        const outcome = mergeThreeWay(current, base, incoming, sourceLabel);
+        doc.transact(() => {
+          applyTextChange(ytext, current, outcome.text);
+          metaMap.set(META_APPLIED_MERGE_ID, mergeId);
+        }, mergeOrigin);
+        if (outcome.conflictCount > 0) {
+          callbacksRef.current.onMergeConflict(noteId, sourceLabel, outcome.conflictCount);
+        }
+      }
+      const ws = provider.ws;
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(encodeMergeApplied(mergeId));
+    };
+
     provider.on("status", ({ status: next }) => {
       setStatus(next === "connected" ? "connected" : next === "connecting" ? "connecting" : "offline");
     });
@@ -212,11 +246,10 @@ export function useCollabDocument(options: Options) {
         // single-flight cua apiClient roi ket noi lai.
         void connectWithFreshToken(true);
       } else if (code === CLOSE_DOCUMENT_REPLACED) {
-        const unsavedText = pendingSnapshot ? ytext.toString() : null;
         writePendingFlag(noteId, false);
         // Tai lieu cu khong bao gio duoc dung lai nua (doi moi = database moi).
         void persistence.clearData();
-        callbacksRef.current.onDocumentReplaced(noteId, unsavedText);
+        callbacksRef.current.onDocumentReplaced(noteId);
       } else if (code === CLOSE_NOTE_DELETED || code === CLOSE_NOTE_NOT_FOUND) {
         writePendingFlag(noteId, false);
         void persistence.clearData();

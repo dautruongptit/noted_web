@@ -34,6 +34,8 @@ export function createCrossDeviceUndoManager(
   ytext: Y.Text,
   provider: WebsocketProvider,
   userId: number,
+  /** Transaction co sua map nay = hop nhat noi dung tu Drive/REST, khong phai user go */
+  metaMap?: Y.Map<unknown>,
 ): { undoManager: Y.UndoManager; dispose: () => void } {
   let documentLoaded = false;
   let lastSource: "local" | "remote" | null = null;
@@ -51,6 +53,9 @@ export function createCrossDeviceUndoManager(
   const undoManager: Y.UndoManager = new Y.UndoManager(ytext, {
     captureTransaction: (tr) => {
       const source = tr.origin === provider ? "remote" : "local";
+      // Ban hop nhat noi dung tu Drive/REST (thiet bi khac thuc hien, den qua
+      // provider) khong phai chu user go -> khong dua vao Ctrl+Z.
+      if (metaMap && tr.changed.has(metaMap as unknown as Y.AbstractType<Y.YEvent<any>>)) return false;
       if (source === "remote" && (!documentLoaded || !isSameUserChange(tr))) return false;
       if (lastSource !== null && lastSource !== source) undoManager.stopCapturing();
       lastSource = source;

@@ -12,7 +12,6 @@ import { authApi } from "./api/authApi";
 import { driveApi } from "./api/driveApi";
 import type { NotesMode } from "./api/notesRepo";
 import type { CurrentUser, SyncBatchResultItem } from "./api/types";
-import { getNotesRepo } from "./api/notesRepo";
 import { useCollabDocument } from "./collab/useCollabDocument";
 import { migrateLocalNotesToServer } from "./utils/migrateLocalNotes";
 import { DriveCallbackScreen } from "./components/auth/DriveCallbackScreen";
@@ -310,8 +309,16 @@ function Workspace({ authStatus, user }: { authStatus: AuthStatus; user: Current
     onSnapshotRejected: (noteId) => {
       if (noteId === notesApi.activeId) autosave.markError();
     },
-    onDocumentReplaced: (noteId, unsavedText) => {
-      void handleDocumentReplaced(noteId, unsavedText);
+    onDocumentReplaced: (noteId) => {
+      // Lay doi tai lieu moi -> useCollabDocument mo lai. Khong tach ban sao.
+      void notesApi.reloadNoteContent(noteId);
+    },
+    onMergeConflict: (noteId, sourceLabel, conflictCount) => {
+      const name = notesApi.notes.find((n) => n.id === noteId)?.name ?? "Ghi chú";
+      setConflictBanner(
+        `"${name}" vừa được gộp với bản từ ${sourceLabel}: ${conflictCount} đoạn bị sửa ở cả 2 nơi — `
+        + `đã giữ cả 2 bản ngay trong file, tìm dòng "<<<<<<<" để chọn bản muốn giữ`,
+      );
     },
     onNoteGone: (noteId) => {
       const remainingTabs = notesApi.tabs.filter((id) => id !== noteId);
@@ -322,32 +329,6 @@ function Workspace({ authStatus, user }: { authStatus: AuthStatus; user: Current
   });
   collabFlushRef.current = collab.flushSnapshot;
 
-  /**
-   * Noi dung note bi thay tu noi khac (keo tu Drive, ghi de khi trung ten...) ->
-   * mo lai theo doi tai lieu moi. Neu tai lieu cu con phan go chua tung len
-   * server (VD go luc offline), cat giu thanh 1 note rieng thay vi bo mat.
-   */
-  const handleDocumentReplaced = async (noteId: number, unsavedText: string | null) => {
-    const original = notesApi.notes.find((n) => n.id === noteId);
-    if (unsavedText !== null && unsavedText.trim() !== "" && original) {
-      const dot = original.name.lastIndexOf(".");
-      const base = dot > 0 ? original.name.slice(0, dot) : original.name;
-      const ext = dot > 0 ? original.name.slice(dot) : "";
-      const now = new Date();
-      const stamp = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")} `
-        + `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const copyName = `${base} (bản chưa lưu ${stamp})${ext}`;
-      try {
-        await getNotesRepo("server").create(copyName, unsavedText);
-        await notesApi.refreshSyncStates(); // them note vua tao vao sidebar
-        setConflictBanner(`"${original.name}" vừa được thay bằng bản từ nơi khác — phần bạn chưa lưu được giữ trong "${copyName}"`);
-      } catch (err) {
-        console.error("Không giữ lại được phần chưa lưu:", err);
-        setConflictBanner(`"${original.name}" vừa được thay bằng bản từ nơi khác — không giữ lại được phần bạn chưa lưu`);
-      }
-    }
-    await notesApi.reloadNoteContent(noteId); // lay doi tai lieu moi -> useCollabDocument mo lai
-  };
   const drive = useDriveSync(mode, notesApi.notes, autosave.status, notesApi.activeId, notesApi.refreshSyncStates);
 
   // Canh bao truoc khi THOAT (dong tab/dong trinh duyet/tai lai trang) neu

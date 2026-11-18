@@ -11,7 +11,28 @@ import { env } from "../config/env";
 //   101 SNAPSHOT_ACK  (server -> client): varUint(trang thai) + varUint(version note)
 export const MESSAGE_TEXT_SNAPSHOT = 100;
 export const MESSAGE_SNAPSHOT_ACK = 101;
+//   102 PENDING_MERGE (server -> 1 client): varUint(mergeId) varString(ban goc)
+//       varString(ban moi) varString(nhan nguon) - noi dung tu Drive/REST can hop
+//       nhat 3 chieu vao Y.Text (xem externalMerge.ts)
+//   103 MERGE_APPLIED (client -> server): varUint(mergeId) - da hop nhat xong
+export const MESSAGE_PENDING_MERGE = 102;
+export const MESSAGE_MERGE_APPLIED = 103;
 export const SNAPSHOT_ACK_OK = 0;
+
+/**
+ * Y.Map phu trong Y.Doc: luu mergeId da hop nhat. Nam TRONG tai lieu nen moi
+ * thiet bi deu thay sau khi dong bo -> server giao lai cung 1 lan hop nhat (VD
+ * ack bi mat) thi khong ap lan 2.
+ */
+export const META_MAP_NAME = "noted-meta";
+export const META_APPLIED_MERGE_ID = "appliedMergeId";
+
+export function encodeMergeApplied(mergeId: number): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, MESSAGE_MERGE_APPLIED);
+  encoding.writeVarUint(encoder, mergeId);
+  return encoding.toUint8Array(encoder);
+}
 
 /** Ten Y.Text goc trong Y.Doc - backend khoi tao tai lieu tu file .txt vao dung ten nay. */
 export const TEXT_ROOT_NAME = "content";

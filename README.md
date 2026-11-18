@@ -60,7 +60,8 @@ src/
                           migrateLocalNotes.ts, session.ts, timeAgo.ts, uniqueName.ts
   collab/               ← soạn thảo cộng tác: collabProtocol.ts (mã message/mã đóng, khớp backend
                           YjsProtocol), useCollabDocument.ts (Y.Doc + IndexedDB + WebSocket),
-                          crossDeviceUndo.ts (Ctrl+Z/Ctrl+Y theo user trên mọi thiết bị)
+                          crossDeviceUndo.ts (Ctrl+Z/Ctrl+Y theo user trên mọi thiết bị),
+                          externalMerge.ts (hợp nhất 3 chiều nội dung từ Drive/REST)
   config/env.ts         ← nơi DUY NHẤT đọc import.meta.env.VITE_*
 ```
 
@@ -93,9 +94,17 @@ src/
     đồng bộ xong.
   - Mã đóng kết nối:
     - `4401`: refresh token rồi kết nối lại.
-    - `4409`: nội dung bị thay từ nơi khác. Client tải lại note theo đời mới; phần chưa lưu được
-      giữ thành note riêng.
+    - `4409`: đời tài liệu trên server khác. Client tải lại note theo đời mới; hiện backend không còn
+      đường nào đổi đời.
     - `4404`/`4410`: gỡ note khỏi danh sách.
+  - **Nội dung từ ngoài luôn được gộp vào 1 file, không tạo bản sao** (`externalMerge.ts`). Các nguồn
+    đó là Drive, REST, hàng đợi offline, ghi đè khi trùng tên.
+    - Server gửi (message `102`) cho đúng 1 trình duyệt hai bản: bản gốc và bản mới. Trình duyệt hợp
+      nhất 3 chiều chúng với nội dung đang soạn: diff3 theo dòng, sau đó theo ký tự cho các dòng liền kề.
+    - Đoạn bị sửa chồng lên cùng chỗ thì giữ cả 2 bản ngay trong file, kẹp giữa `<<<<<<< Đang soạn` /
+      `=======` / `>>>>>>> Google Drive`, và hiện banner báo cho người dùng.
+    - `mergeId` lưu trong `Y.Map("noted-meta")` để không áp 2 lần. Bản hợp nhất không nằm trong lịch sử
+      Ctrl+Z, vì đó không phải chữ user gõ.
   - Note ở Local Mode vẫn chạy như cũ: `useAutoSave` + IndexedDB `localNotesStore`, không dùng Yjs.
 - **Nhiều trình duyệt cùng sửa một note — chỉ áp dụng cho note KHÔNG dùng Yjs** (`App.tsx`):
   note cộng tác bỏ qua cơ chế này vì thay đổi đã tự chảy vào qua WebSocket. Khi quay lại tab (`focus`/
