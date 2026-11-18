@@ -61,6 +61,24 @@ server {
         proxy_buffering off;
     }
 
+    # ---- WebSocket soan thao cong tac (Yjs) ----
+    # Chi dung khi build voi VITE_API_BASE_URL="" (cung origin). Production hien
+    # goi thang noted-api.* qua Cloudflare Tunnel (tunnel ho tro WebSocket san).
+    location /ws/ {
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/ws/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $noted_proto;
+        # Ket noi song lau; client gia han awareness moi 15s nen 120s la du rong.
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+        proxy_buffering off;
+    }
+
     # Luong dang nhap Google OAuth2 (Spring Security tu dong xu ly cac path nay)
     location /oauth2/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/oauth2/;

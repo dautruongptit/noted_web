@@ -20,7 +20,7 @@ export class ApiError extends Error {
 // dang xuat toan bo thiet bi mac du khong co gi bat thuong xay ra.
 let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshAccessToken(): Promise<boolean> {
+export async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {

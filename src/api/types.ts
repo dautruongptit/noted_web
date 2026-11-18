@@ -16,6 +16,10 @@ export type NoteSummary = {
   // lan sync/offline-queue tiep theo (Optimistic Concurrency Control, SEC-19).
   // KHONG dung cho so sanh hien thi UI nao - chi la du lieu ky thuat.
   version: number;
+  // "Doi" tai lieu Yjs cua note (Server Mode). Tang khi noi dung bi ghi de tu
+  // ngoai luong soan thao cong tac - client phai mo lai phong WebSocket theo
+  // doi moi. Local Mode (localNotesStore) khong co truong nay.
+  yjsGeneration?: number;
   /** Kich thuoc noi dung (byte) - dung hien dung luong tung tep o bang Google Drive */
   // TUY CHON: backend hien KHONG tra truong nay (giu nguyen, khong sua BE).
   // Local Mode tu tinh duoc nen van co gia tri; Server Mode se la undefined ->

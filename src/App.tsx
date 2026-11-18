@@ -11,7 +11,9 @@ import { useAuth, type AuthStatus } from "./hooks/useAuth";
 import { authApi } from "./api/authApi";
 import { driveApi } from "./api/driveApi";
 import type { NotesMode } from "./api/notesRepo";
-import type { SyncBatchResultItem } from "./api/types";
+import type { CurrentUser, SyncBatchResultItem } from "./api/types";
+import { getNotesRepo } from "./api/notesRepo";
+import { useCollabDocument } from "./collab/useCollabDocument";
 import { migrateLocalNotesToServer } from "./utils/migrateLocalNotes";
 import { DriveCallbackScreen } from "./components/auth/DriveCallbackScreen";
 import { TopBar } from "./components/layout/TopBar";
@@ -77,10 +79,10 @@ function AuthGate() {
   // KHONG con "if (checking) return blank" / "if (!authenticated) return
   // LoginScreen" nua - Workspace LUON duoc render NGAY LAP TUC (Local Mode),
   // "auth" chi anh huong "mode" ben trong Workspace (xem useEffect trong do).
-  return <Workspace authStatus={auth.status} />;
+  return <Workspace authStatus={auth.status} user={auth.user} />;
 }
 
-function Workspace({ authStatus }: { authStatus: AuthStatus }) {
+function Workspace({ authStatus, user }: { authStatus: AuthStatus; user: CurrentUser | null }) {
   // Mac dinh NEN TOI - theo prototype moi nhat (DOC/Design, 2026-08-23). Lua
   // chon cua nguoi dung van DUOC LUU LAI: neu ai thich nen sang thi bam 1 lan
   // la xong, khong phai bam lai moi lan mo app - chi nguoi CHUA TUNG bam mac
@@ -191,6 +193,9 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
 
     const kiemTraBanMoi = async () => {
       if (document.visibilityState !== "visible") return;
+      // Note soan thao cong tac (Yjs): thay doi tu thiet bi khac tu chay vao qua
+      // WebSocket, khong can (va khong duoc) keo noi dung qua REST de ghi de.
+      if (collabEnabled) return;
       const id = notesApi.activeId;
       if (id === null) return;
 
@@ -269,10 +274,80 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
   // notesApi.newNote() calls markSaved() once autosave is initialized below.
   // Safe: this closure only runs on user interaction, well after render.
   const notesApi = useNotes(mode, () => autosave.markSaved());
+  // Note co doi tai lieu Yjs (do backend cap) va dang o Server Mode -> soan thao cong tac.
+  const collabEnabled = mode === "server" && notesApi.active?.yjsGeneration != null;
+  const collabFlushRef = useRef<() => void>(() => {});
   const autosave = useAutoSave(
     mode, notesApi.notes, notesApi.setNotes, notesApi.activeId, notesApi.active?.content,
     offlineSync.queueChange, offlineSync.pendingCount,
+    collabEnabled, () => collabFlushRef.current(),
   );
+
+  // ---- Soan thao cong tac thoi gian thuc (Server Mode) ----
+  // Note dang active dong bo qua Yjs + WebSocket: moi phim go di thang toi cac
+  // thiet bi khac, luu IndexedDB khi offline, hop nhat khong xung dot khi co
+  // mang lai. Anh chup text gui sau moi dot go de backend ghi file .txt / Drive.
+  const collab = useCollabDocument({
+    noteId: notesApi.active?.id ?? null,
+    generation: notesApi.active?.yjsGeneration ?? null,
+    enabled: collabEnabled,
+    userId: user?.id ?? null,
+    userName: user?.fullName || user?.email || "Noted",
+    onLocalChange: () => autosave.markUnsaved(),
+    onSnapshotSaved: (noteId, version) => {
+      notesApi.setNotes((items) => items.map((n) => (n.id === noteId
+        ? {
+            ...n,
+            // Version khong doi = server thay text trung file dang co, khong ghi gi
+            syncState: version !== n.version ? "PENDING_DRIVE" : n.syncState,
+            updated: version !== n.version ? new Date() : n.updated,
+            version,
+            contentVersion: version,
+          }
+        : n)));
+      if (noteId === notesApi.activeId) autosave.markSaved();
+    },
+    onSnapshotRejected: (noteId) => {
+      if (noteId === notesApi.activeId) autosave.markError();
+    },
+    onDocumentReplaced: (noteId, unsavedText) => {
+      void handleDocumentReplaced(noteId, unsavedText);
+    },
+    onNoteGone: (noteId) => {
+      const remainingTabs = notesApi.tabs.filter((id) => id !== noteId);
+      notesApi.setNotes((items) => items.filter((n) => n.id !== noteId));
+      notesApi.setTabs(remainingTabs);
+      if (notesApi.activeId === noteId) notesApi.setActiveId(remainingTabs[0] ?? null);
+    },
+  });
+  collabFlushRef.current = collab.flushSnapshot;
+
+  /**
+   * Noi dung note bi thay tu noi khac (keo tu Drive, ghi de khi trung ten...) ->
+   * mo lai theo doi tai lieu moi. Neu tai lieu cu con phan go chua tung len
+   * server (VD go luc offline), cat giu thanh 1 note rieng thay vi bo mat.
+   */
+  const handleDocumentReplaced = async (noteId: number, unsavedText: string | null) => {
+    const original = notesApi.notes.find((n) => n.id === noteId);
+    if (unsavedText !== null && unsavedText.trim() !== "" && original) {
+      const dot = original.name.lastIndexOf(".");
+      const base = dot > 0 ? original.name.slice(0, dot) : original.name;
+      const ext = dot > 0 ? original.name.slice(dot) : "";
+      const now = new Date();
+      const stamp = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")} `
+        + `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const copyName = `${base} (bản chưa lưu ${stamp})${ext}`;
+      try {
+        await getNotesRepo("server").create(copyName, unsavedText);
+        await notesApi.refreshSyncStates(); // them note vua tao vao sidebar
+        setConflictBanner(`"${original.name}" vừa được thay bằng bản từ nơi khác — phần bạn chưa lưu được giữ trong "${copyName}"`);
+      } catch (err) {
+        console.error("Không giữ lại được phần chưa lưu:", err);
+        setConflictBanner(`"${original.name}" vừa được thay bằng bản từ nơi khác — không giữ lại được phần bạn chưa lưu`);
+      }
+    }
+    await notesApi.reloadNoteContent(noteId); // lay doi tai lieu moi -> useCollabDocument mo lai
+  };
   const drive = useDriveSync(mode, notesApi.notes, autosave.status, notesApi.activeId, notesApi.refreshSyncStates);
 
   // Canh bao truoc khi THOAT (dong tab/dong trinh duyet/tai lai trang) neu
@@ -320,7 +395,9 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
     notesApi.setNotes((items) =>
       items.map((note) => (note.id === notesApi.activeId ? { ...note, content: value } : note))
     );
-    autosave.markUnsaved();
+    // Che do cong tac: EditorPane cung goi vao day khi nhan thay doi tu thiet bi
+    // khac - "chua luu" do useCollabDocument danh dau rieng cho thay doi cuc bo.
+    if (!collabEnabled) autosave.markUnsaved();
   };
 
   const menuNote = notesApi.menuId !== null ? notesApi.notes.find((n) => n.id === notesApi.menuId) : null;
@@ -390,7 +467,7 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
             onToggleDark={() => setDark((d) => !d)}
           />
 
-          {notesApi.active && (
+          {notesApi.active && (!collabEnabled || collab.session) && (
             <EditorPane
               content={notesApi.active.content}
               lines={notesApi.lines}
@@ -398,12 +475,15 @@ function Workspace({ authStatus }: { authStatus: AuthStatus }) {
               textareaRef={notesApi.textarea}
               onCursorMove={setCursorLine}
               onChange={handleChangeContent}
+              collab={collabEnabled ? collab.session : null}
             />
           )}
 
           <StatusBar
             status={autosave.status}
-            statusLabel={autosave.statusLabel()}
+            statusLabel={collabEnabled && collab.status !== "connected" && autosave.status !== "saved"
+              ? "Ngoại tuyến — đã lưu trên máy này, sẽ đồng bộ khi có mạng"
+              : autosave.statusLabel()}
             driveConnected={drive.driveConnected}
             syncStatus={drive.syncStatus}
             driveIconChar={drive.driveIcon()}

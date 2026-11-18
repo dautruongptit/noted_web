@@ -36,6 +36,9 @@ export type Note = {
   // co the da cu tu doi nao. Dung "version" de phat hien "co ai vua sua o noi
   // khac khong" se LUON tra loi sai la khong.
   contentVersion: number;
+  // Doi tai lieu Yjs (xem api/types.ts). null = note Local Mode, khong dung
+  // soan thao cong tac (van luu qua useAutoSave nhu cu).
+  yjsGeneration: number | null;
 };
 
 export type NoteSyncStatus = "synced" | "pending" | "syncing";

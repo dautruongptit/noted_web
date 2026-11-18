@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
-import { EditorState } from "@codemirror/state";
+import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, lineNumbers, highlightActiveLineGutter, keymap } from "@codemirror/view";
 import { history, defaultKeymap, historyKeymap } from "@codemirror/commands";
+import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
+import type { CollabSession } from "../../collab/useCollabDocument";
 
 type Props = {
   content: string;
@@ -13,6 +15,11 @@ type Props = {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   onCursorMove: (line: number) => void;
   onChange: (value: string) => void;
+  /**
+   * Co gia tri = che do soan thao cong tac (Server Mode): noi dung lay tu Y.Text,
+   * "content" bi bo qua. null = che do cu (Local Mode), noi dung do "content" dieu khien.
+   */
+  collab?: CollabSession | null;
 };
 
 // Mau lay tu bien --editor-* (xem index.css) de vung soan thao GIU NGUYEN dien
@@ -64,7 +71,7 @@ const notedTheme = EditorView.theme({
  * thiet cho nut "Dinh dang lai" sap toi, neu khong nguoi dung dinh dang nham la
  * mat ban goc.
  */
-export function EditorPane({ content, lines, cursorLine, textareaRef, onCursorMove, onChange }: Props) {
+export function EditorPane({ content, lines, cursorLine, textareaRef, onCursorMove, onChange, collab = null }: Props) {
   void lines;      // CodeMirror tu dem dong
   void cursorLine; // vi tri con tro do chinh CodeMirror quan ly
   const hostRef = useRef<HTMLDivElement>(null);
@@ -76,19 +83,32 @@ export function EditorPane({ content, lines, cursorLine, textareaRef, onCursorMo
   onChangeRef.current = onChange;
   onCursorMoveRef.current = onCursorMove;
 
-  // Tao editor DUNG MOT LAN. Noi dung duoc dong bo o effect rieng ben duoi.
+  // Tao editor MOT LAN cho moi tai lieu: che do cu chi tao 1 lan (noi dung dong
+  // bo o effect rieng ben duoi); che do cong tac tao lai khi doi sang tai lieu
+  // Yjs khac (doi note) vi yCollab gan chat vao 1 Y.Text.
   useEffect(() => {
     if (!hostRef.current) return;
+
+    // Che do cong tac: Ctrl+Z / Ctrl+Y di vao Y.UndoManager thay cho history()
+    // cua CodeMirror. UndoManager CHI theo doi thay doi do chinh editor nay tao
+    // ra (origin cua yCollab), nen hoan tac chi go phan chu cua minh - khong
+    // xoa chu thiet bi khac vua hop nhat vao. yUndoManagerKeymap dat TRUOC
+    // defaultKeymap de thang phim tat mac dinh.
+    const editingExtensions: Extension[] = collab
+      ? [
+          yCollab(collab.ytext, collab.awareness, { undoManager: collab.undoManager }),
+          keymap.of([...yUndoManagerKeymap, ...defaultKeymap]),
+        ]
+      : [history(), keymap.of([...defaultKeymap, ...historyKeymap])];
 
     const view = new EditorView({
       parent: hostRef.current,
       state: EditorState.create({
-        doc: content,
+        doc: collab ? collab.ytext.toString() : content,
         extensions: [
           lineNumbers(),
           highlightActiveLineGutter(),
-          history(),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
+          ...editingExtensions,
           EditorView.lineWrapping, // giu nguyen hanh vi cu cua <textarea>
           notedTheme,
           EditorView.updateListener.of((u) => {
@@ -113,18 +133,19 @@ export function EditorPane({ content, lines, cursorLine, textareaRef, onCursorMo
       (textareaRef as { current: unknown }).current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [collab]);
 
   // Dong bo noi dung TU NGOAI vao (doi tab, keo ve tu Drive, migrate...).
   // CHI ghi de khi that su khac - neu khong, moi phim go se bi ghi de lai bang
   // chinh no va con tro nhay ve dau dong.
+  // Che do cong tac bo qua: Y.Text la nguon su that, yCollab tu ap thay doi.
   useEffect(() => {
     const view = viewRef.current;
-    if (!view) return;
+    if (!view || collab) return;
     const dangCo = view.state.doc.toString();
     if (dangCo === content) return;
     view.dispatch({ changes: { from: 0, to: dangCo.length, insert: content } });
-  }, [content]);
+  }, [content, collab]);
 
   return (
     <section className="editor-pane">

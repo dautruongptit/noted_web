@@ -21,6 +21,7 @@ function toLocalNote(source: NoteSummary | NoteDetail, content = "", contentLoad
     // Chi coi la "dang giu noi dung cua phien ban nay" khi that su co tai noi
     // dung ve. Voi ban tom tat (chua mo note) thi de 0 - chua co gi de so sanh.
     contentVersion: contentLoaded ? source.version : 0,
+    yjsGeneration: source.yjsGeneration ?? null,
     sizeBytes: source.contentSizeBytes ?? 0, // 0 = khong biet (backend khong tra) -> UI tu an
   };
 }
@@ -304,7 +305,7 @@ export function useNotes(mode: NotesMode, markSaved: () => void) {
         const updated = prev.map((n) => {
           const fresh = byId.get(n.id);
           return fresh
-            ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt), conflictCopy: fresh.conflictCopy, version: fresh.version, sizeBytes: fresh.contentSizeBytes ?? n.sizeBytes }
+            ? { ...n, syncState: fresh.syncState, updated: new Date(fresh.updatedAt), conflictCopy: fresh.conflictCopy, version: fresh.version, yjsGeneration: fresh.yjsGeneration ?? n.yjsGeneration, sizeBytes: fresh.contentSizeBytes ?? n.sizeBytes }
             : n;
         });
         const existingIds = new Set(prev.map((n) => n.id));

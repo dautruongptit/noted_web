@@ -24,6 +24,11 @@ export function useAutoSave(
   activeContent: string | undefined,
   queueOfflineChange: (change: PendingChange) => Promise<void>,
   offlinePendingCount: number,
+  // Note dang mo o che do soan thao cong tac (Yjs): KHONG luu qua REST nua -
+  // noi dung di tung phim qua WebSocket, trang thai "Da luu" do xac nhan anh
+  // chup (useCollabDocument) quyet dinh qua markSaved()/markError().
+  collabActive = false,
+  collabFlush: () => void = () => {},
 ) {
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [saveError, setSaveError] = useState(false);
@@ -99,12 +104,16 @@ export function useAutoSave(
       autoSaveTimer.current = null;
     }
     if (status === "saved") return;
+    if (collabActive) {
+      collabFlush();
+      return;
+    }
     void performSave(activeId);
   };
 
   // Autosave debounce — stores timer ref so manualSave can cancel it
   useEffect(() => {
-    if (status !== "unsaved") return;
+    if (status !== "unsaved" || collabActive) return;
     autoSaveTimer.current = window.setTimeout(() => {
       autoSaveTimer.current = null;
       void performSave(activeId);
@@ -116,7 +125,7 @@ export function useAutoSave(
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeContent, activeId, status]);
+  }, [activeContent, activeId, status, collabActive]);
 
   // Ctrl/Cmd+S — cancels pending auto-save timer
   useEffect(() => {
@@ -132,11 +141,12 @@ export function useAutoSave(
 
   const markUnsaved = () => { setStatus("unsaved"); setSaveError(false); };
   const markSaved = () => setStatus("saved");
+  const markError = () => { setStatus("error"); setSaveError(true); };
 
   const statusLabel = () => {
     if (status === "saving") return "Đang lưu...";
     if (status === "error") {
-      if (mode === "local") return "Lưu thất bại";
+      if (mode === "local" || collabActive) return "Lưu thất bại";
       return offlinePendingCount > 0
         ? "Lưu thất bại — đã lưu tạm, đang chờ đồng bộ lại"
         : "Lưu thất bại — đã lưu tạm";
@@ -145,5 +155,5 @@ export function useAutoSave(
     return "Chưa lưu";
   };
 
-  return { status, saveError, manualSave, markUnsaved, markSaved, statusLabel };
+  return { status, saveError, manualSave, markUnsaved, markSaved, markError, statusLabel };
 }
